@@ -11,7 +11,8 @@ import {
   Trash2,
   Eye,
   RefreshCw,
-  User
+  User,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -25,9 +26,28 @@ const Schedules = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [createFormData, setCreateFormData] = useState({
+    teacher: '',
+    dayOfWeek: 'monday',
+    startTime: '',
+    endTime: '',
+    duration: 60,
+    subjects: [],
+    maxStudents: 5,
+    isAvailable: true
+  });
+  const [editFormData, setEditFormData] = useState({});
+  const [users, setUsers] = useState([]);
+  const [newSubject, setNewSubject] = useState('');
 
   useEffect(() => {
     fetchSchedules();
+    if (user?.role === 'admin') {
+      fetchUsers();
+    }
   }, [currentPage, searchTerm, dayFilter, teacherFilter]);
 
   const fetchSchedules = async () => {
@@ -52,6 +72,15 @@ const Schedules = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data.users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
   const handleDeleteSchedule = async (scheduleId) => {
     if (!window.confirm('Are you sure you want to delete this schedule?')) {
       return;
@@ -64,6 +93,105 @@ const Schedules = () => {
     } catch (error) {
       console.error('Error deleting schedule:', error);
       toast.error('Failed to delete schedule');
+    }
+  };
+
+  const handleViewSchedule = (schedule) => {
+    setSelectedSchedule(schedule);
+    setShowViewModal(true);
+  };
+
+  const handleEditSchedule = (schedule) => {
+    setSelectedSchedule(schedule);
+    setEditFormData({
+      teacher: schedule.teacher?._id || '',
+      dayOfWeek: schedule.dayOfWeek || 'monday',
+      startTime: schedule.startTime || '',
+      endTime: schedule.endTime || '',
+      duration: schedule.duration || 60,
+      subjects: schedule.subjects || [],
+      maxStudents: schedule.maxStudents || 5,
+      isAvailable: schedule.isAvailable !== undefined ? schedule.isAvailable : true
+    });
+    setShowEditModal(true);
+  };
+
+  const handleCreateSchedule = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/schedules', createFormData);
+      toast.success('Schedule created successfully');
+      setShowCreateModal(false);
+      setCreateFormData({
+        teacher: '',
+        dayOfWeek: 'monday',
+        startTime: '',
+        endTime: '',
+        duration: 60,
+        subjects: [],
+        maxStudents: 5,
+        isAvailable: true
+      });
+      fetchSchedules();
+    } catch (error) {
+      console.error('Error creating schedule:', error);
+      toast.error('Failed to create schedule');
+    }
+  };
+
+  const handleUpdateSchedule = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/schedules/${selectedSchedule._id}`, editFormData);
+      toast.success('Schedule updated successfully');
+      setShowEditModal(false);
+      setSelectedSchedule(null);
+      fetchSchedules();
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      toast.error('Failed to update schedule');
+    }
+  };
+
+  const handleInputChange = (e, formType) => {
+    const { name, value, type, checked } = e.target;
+    const val = type === 'checkbox' ? checked : value;
+    
+    if (formType === 'create') {
+      setCreateFormData(prev => ({ ...prev, [name]: val }));
+    } else if (formType === 'edit') {
+      setEditFormData(prev => ({ ...prev, [name]: val }));
+    }
+  };
+
+  const addSubject = (formType) => {
+    if (!newSubject.trim()) return;
+    
+    if (formType === 'create') {
+      setCreateFormData(prev => ({
+        ...prev,
+        subjects: [...prev.subjects, newSubject.trim()]
+      }));
+    } else if (formType === 'edit') {
+      setEditFormData(prev => ({
+        ...prev,
+        subjects: [...prev.subjects, newSubject.trim()]
+      }));
+    }
+    setNewSubject('');
+  };
+
+  const removeSubject = (index, formType) => {
+    if (formType === 'create') {
+      setCreateFormData(prev => ({
+        ...prev,
+        subjects: prev.subjects.filter((_, i) => i !== index)
+      }));
+    } else if (formType === 'edit') {
+      setEditFormData(prev => ({
+        ...prev,
+        subjects: prev.subjects.filter((_, i) => i !== index)
+      }));
     }
   };
 
@@ -100,6 +228,10 @@ const Schedules = () => {
     return false;
   };
 
+  const getRoleSpecificUsers = (role) => {
+    return users.filter(u => u.role === role && u.isActive);
+  };
+
   if (!['admin', 'teacher'].includes(user?.role)) {
     return (
       <div className="text-center py-12">
@@ -118,15 +250,17 @@ const Schedules = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Schedules</h1>
-          <p className="text-gray-600">Manage teacher availability and time slots</p>
+          <p className="text-gray-600">Manage teacher availability and schedules</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Schedule
-        </button>
+        {user?.role === 'admin' && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Schedule
+          </button>
+        )}
       </div>
 
       {/* Filters and Search */}
@@ -168,7 +302,11 @@ const Schedules = () => {
               className="input"
             >
               <option value="">All Teachers</option>
-              {/* TODO: Populate with actual teachers */}
+              {getRoleSpecificUsers('teacher').map(teacher => (
+                <option key={teacher._id} value={teacher._id}>
+                  {teacher.firstName} {teacher.lastName}
+                </option>
+              ))}
             </select>
 
             {/* Refresh Button */}
@@ -271,7 +409,7 @@ const Schedules = () => {
                       <td className="table-cell">
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => {/* TODO: Implement view schedule */}}
+                            onClick={() => handleViewSchedule(schedule)}
                             className="btn btn-sm btn-secondary"
                             title="View Schedule"
                           >
@@ -280,7 +418,7 @@ const Schedules = () => {
                           {canManageSchedule(schedule) && (
                             <>
                               <button
-                                onClick={() => {/* TODO: Implement edit schedule */}}
+                                onClick={() => handleEditSchedule(schedule)}
                                 className="btn btn-sm btn-primary"
                                 title="Edit Schedule"
                               >
@@ -331,24 +469,417 @@ const Schedules = () => {
         </div>
       )}
 
-      {/* Create Schedule Modal - Placeholder */}
+      {/* Create Schedule Modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="text-lg font-medium text-gray-900">Create New Schedule</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <div className="modal-body">
-              <p className="text-gray-600">
-                Schedule creation functionality will be implemented here.
-              </p>
-            </div>
+            <form onSubmit={handleCreateSchedule} className="modal-body">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Teacher
+                  </label>
+                  <select
+                    name="teacher"
+                    value={createFormData.teacher}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="">Select Teacher</option>
+                    {getRoleSpecificUsers('teacher').map(teacher => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.firstName} {teacher.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Day of Week
+                  </label>
+                  <select
+                    name="dayOfWeek"
+                    value={createFormData.dayOfWeek}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
+                    <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={createFormData.startTime}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={createFormData.endTime}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    name="duration"
+                    value={createFormData.duration}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    min="15"
+                    step="15"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Max Students
+                  </label>
+                  <input
+                    type="number"
+                    name="maxStudents"
+                    value={createFormData.maxStudents}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subjects
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={newSubject}
+                      onChange={(e) => setNewSubject(e.target.value)}
+                      placeholder="Add subject"
+                      className="input flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addSubject('create')}
+                      className="btn btn-secondary"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {createFormData.subjects.map((subject, index) => (
+                      <span key={index} className="badge badge-secondary">
+                        {subject}
+                        <button
+                          type="button"
+                          onClick={() => removeSubject(index, 'create')}
+                          className="ml-1 text-xs hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="isAvailable"
+                      checked={createFormData.isAvailable}
+                      onChange={(e) => handleInputChange(e, 'create')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Available</span>
+                  </label>
+                </div>
+              </div>
+            </form>
             <div className="modal-footer">
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="btn btn-secondary"
               >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSchedule}
+                className="btn btn-primary"
+              >
+                Create Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Schedule Modal */}
+      {showViewModal && selectedSchedule && (
+        <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="text-lg font-medium text-gray-900">Schedule Details</h3>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Teacher</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedSchedule.teacher?.firstName} {selectedSchedule.teacher?.lastName}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Day</label>
+                  <p className="text-sm text-gray-900">{getDayBadge(selectedSchedule.dayOfWeek)}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Time</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedSchedule.startTime} - {selectedSchedule.endTime} ({selectedSchedule.duration} minutes)
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Subjects</label>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedSchedule.subjects?.map((subject, index) => (
+                      <span key={index} className="badge badge-secondary text-xs">
+                        {subject}
+                      </span>
+                    )) || 'No subjects'}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Capacity</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedSchedule.currentBookings}/{selectedSchedule.maxStudents} students
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Status</label>
+                  <p className="text-sm text-gray-900">{getAvailabilityBadge(selectedSchedule.isAvailable)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="btn btn-secondary"
+              >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Schedule Modal */}
+      {showEditModal && selectedSchedule && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="text-lg font-medium text-gray-900">Edit Schedule</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateSchedule} className="modal-body">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Teacher
+                  </label>
+                  <select
+                    name="teacher"
+                    value={editFormData.teacher}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="">Select Teacher</option>
+                    {getRoleSpecificUsers('teacher').map(teacher => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.firstName} {teacher.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Day of Week
+                  </label>
+                  <select
+                    name="dayOfWeek"
+                    value={editFormData.dayOfWeek}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
+                    <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={editFormData.startTime}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={editFormData.endTime}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    name="duration"
+                    value={editFormData.duration}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    min="15"
+                    step="15"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Max Students
+                  </label>
+                  <input
+                    type="number"
+                    name="maxStudents"
+                    value={editFormData.maxStudents}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subjects
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={newSubject}
+                      onChange={(e) => setNewSubject(e.target.value)}
+                      placeholder="Add subject"
+                      className="input flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => addSubject('edit')}
+                      className="btn btn-secondary"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {editFormData.subjects?.map((subject, index) => (
+                      <span key={index} className="badge badge-secondary">
+                        {subject}
+                        <button
+                          type="button"
+                          onClick={() => removeSubject(index, 'edit')}
+                          className="ml-1 text-xs hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="isAvailable"
+                      checked={editFormData.isAvailable}
+                      onChange={(e) => handleInputChange(e, 'edit')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Available</span>
+                  </label>
+                </div>
+              </div>
+            </form>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateSchedule}
+                className="btn btn-primary"
+              >
+                Update Schedule
               </button>
             </div>
           </div>

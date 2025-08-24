@@ -9,7 +9,8 @@ import {
   Edit, 
   Trash2,
   Eye,
-  UserPlus
+  UserPlus,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,18 @@ const Users = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [createFormData, setCreateFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: 'parent',
+    password: ''
+  });
+  const [editFormData, setEditFormData] = useState({});
 
   useEffect(() => {
     fetchUsers();
@@ -60,6 +73,67 @@ const Users = () => {
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Failed to deactivate user');
+    }
+  };
+
+  const handleViewUser = (userItem) => {
+    setSelectedUser(userItem);
+    setShowViewModal(true);
+  };
+
+  const handleEditUser = (userItem) => {
+    setSelectedUser(userItem);
+    setEditFormData({
+      firstName: userItem.firstName || '',
+      lastName: userItem.lastName || '',
+      email: userItem.email || '',
+      phone: userItem.phone || '',
+      role: userItem.role || 'parent'
+    });
+    setShowEditModal(true);
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/users', createFormData);
+      toast.success('User created successfully');
+      setShowCreateModal(false);
+      setCreateFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        role: 'parent',
+        password: ''
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error('Failed to create user');
+    }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/users/${selectedUser._id}`, editFormData);
+      toast.success('User updated successfully');
+      setShowEditModal(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Failed to update user');
+    }
+  };
+
+  const handleInputChange = (e, formType) => {
+    const { name, value } = e.target;
+    if (formType === 'create') {
+      setCreateFormData(prev => ({ ...prev, [name]: value }));
+    } else if (formType === 'edit') {
+      setEditFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -212,14 +286,14 @@ const Users = () => {
                       <td className="table-cell">
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => {/* TODO: Implement view user */}}
+                            onClick={() => handleViewUser(userItem)}
                             className="btn btn-sm btn-secondary"
                             title="View User"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => {/* TODO: Implement edit user */}}
+                            onClick={() => handleEditUser(userItem)}
                             className="btn btn-sm btn-primary"
                             title="Edit User"
                           >
@@ -270,24 +344,274 @@ const Users = () => {
         </div>
       )}
 
-      {/* Create User Modal - Placeholder */}
+      {/* Create User Modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="text-lg font-medium text-gray-900">Create New User</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <div className="modal-body">
-              <p className="text-gray-600">
-                User creation functionality will be implemented here.
-              </p>
-            </div>
+            <form onSubmit={handleCreateUser} className="modal-body">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={createFormData.firstName}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={createFormData.lastName}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={createFormData.email}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={createFormData.phone}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role
+                  </label>
+                  <select
+                    name="role"
+                    value={createFormData.role}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="parent">Parent</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={createFormData.password}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+              </div>
+            </form>
             <div className="modal-footer">
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="btn btn-secondary"
               >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateUser}
+                className="btn btn-primary"
+              >
+                Create User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View User Modal */}
+      {showViewModal && selectedUser && (
+        <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="text-lg font-medium text-gray-900">User Details</h3>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedUser.firstName} {selectedUser.lastName}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <p className="text-sm text-gray-900">{selectedUser.email}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Phone</label>
+                  <p className="text-sm text-gray-900">{selectedUser.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Role</label>
+                  <p className="text-sm text-gray-900">{getRoleBadge(selectedUser.role)}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Status</label>
+                  <p className="text-sm text-gray-900">{getStatusBadge(selectedUser.isActive)}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Created</label>
+                  <p className="text-sm text-gray-900">
+                    {new Date(selectedUser.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="btn btn-secondary"
+              >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditModal && selectedUser && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="text-lg font-medium text-gray-900">Edit User</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateUser} className="modal-body">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={editFormData.firstName}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={editFormData.lastName}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={editFormData.email}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editFormData.phone}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role
+                  </label>
+                  <select
+                    name="role"
+                    value={editFormData.role}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="parent">Parent</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+            </form>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                className="btn btn-primary"
+              >
+                Update User
               </button>
             </div>
           </div>

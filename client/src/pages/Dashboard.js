@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
   Clock, 
@@ -15,6 +16,7 @@ import moment from 'moment';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalAppointments: 0,
     upcomingAppointments: 0,
@@ -68,6 +70,29 @@ const Dashboard = () => {
     }
   };
 
+  // Quick Action Handlers
+  const handleQuickAction = (action) => {
+    switch (action) {
+      case 'manageUsers':
+        navigate('/users');
+        break;
+      case 'createAppointment':
+        navigate('/appointments');
+        break;
+      case 'viewSchedule':
+        navigate('/schedules');
+        break;
+      case 'updateNotes':
+        navigate('/appointments');
+        break;
+      case 'requestReschedule':
+        navigate('/appointments');
+        break;
+      default:
+        break;
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       scheduled: { class: 'status-scheduled', text: 'Scheduled' },
@@ -115,11 +140,17 @@ const Dashboard = () => {
               </div>
               <div className="card-body">
                 <div className="space-y-3">
-                  <button className="btn btn-primary w-full">
+                  <button 
+                    className="btn btn-primary w-full"
+                    onClick={() => handleQuickAction('manageUsers')}
+                  >
                     <Users className="h-4 w-4 mr-2" />
                     Manage Users
                   </button>
-                  <button className="btn btn-secondary w-full">
+                  <button 
+                    className="btn btn-secondary w-full"
+                    onClick={() => handleQuickAction('createAppointment')}
+                  >
                     <Calendar className="h-4 w-4 mr-2" />
                     Create Appointment
                   </button>
@@ -154,11 +185,17 @@ const Dashboard = () => {
               </div>
               <div className="card-body">
                 <div className="space-y-3">
-                  <button className="btn btn-primary w-full">
+                  <button 
+                    className="btn btn-primary w-full"
+                    onClick={() => handleQuickAction('viewSchedule')}
+                  >
                     <Clock className="h-4 w-4 mr-2" />
                     View Schedule
                   </button>
-                  <button className="btn btn-secondary w-full">
+                  <button 
+                    className="btn btn-secondary w-full"
+                    onClick={() => handleQuickAction('updateNotes')}
+                  >
                     <BookOpen className="h-4 w-4 mr-2" />
                     Update Notes
                   </button>
@@ -191,11 +228,17 @@ const Dashboard = () => {
               </div>
               <div className="card-body">
                 <div className="space-y-3">
-                  <button className="btn btn-primary w-full">
+                  <button 
+                    className="btn btn-primary w-full"
+                    onClick={() => handleQuickAction('viewSchedule')}
+                  >
                     <Calendar className="h-4 w-4 mr-2" />
                     View Schedule
                   </button>
-                  <button className="btn btn-secondary w-full">
+                  <button 
+                    className="btn btn-secondary w-full"
+                    onClick={() => handleQuickAction('requestReschedule')}
+                  >
                     <BookOpen className="h-4 w-4 mr-2" />
                     Request Reschedule
                   </button>

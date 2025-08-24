@@ -10,7 +10,8 @@ import {
   Edit,
   Trash2,
   Eye,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import moment from 'moment';
 import toast from 'react-hot-toast';
@@ -25,9 +26,26 @@ const Appointments = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [createFormData, setCreateFormData] = useState({
+    student: '',
+    teacher: '',
+    subject: '',
+    scheduledDate: '',
+    startTime: '',
+    endTime: '',
+    notes: ''
+  });
+  const [editFormData, setEditFormData] = useState({});
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     fetchAppointments();
+    if (user?.role === 'admin') {
+      fetchUsers();
+    }
   }, [currentPage, searchTerm, statusFilter, dateFilter]);
 
   const fetchAppointments = async () => {
@@ -52,6 +70,15 @@ const Appointments = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data.users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
   const handleDeleteAppointment = async (appointmentId) => {
     if (!window.confirm('Are you sure you want to cancel this appointment?')) {
       return;
@@ -64,6 +91,70 @@ const Appointments = () => {
     } catch (error) {
       console.error('Error cancelling appointment:', error);
       toast.error('Failed to cancel appointment');
+    }
+  };
+
+  const handleViewAppointment = (appointment) => {
+    setSelectedAppointment(appointment);
+    setShowViewModal(true);
+  };
+
+  const handleEditAppointment = (appointment) => {
+    setSelectedAppointment(appointment);
+    setEditFormData({
+      student: appointment.student?._id || '',
+      teacher: appointment.teacher?._id || '',
+      subject: appointment.subject || '',
+      scheduledDate: appointment.scheduledDate ? moment(appointment.scheduledDate).format('YYYY-MM-DD') : '',
+      startTime: appointment.startTime || '',
+      endTime: appointment.endTime || '',
+      notes: appointment.notes || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleCreateAppointment = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/appointments', createFormData);
+      toast.success('Appointment created successfully');
+      setShowCreateModal(false);
+      setCreateFormData({
+        student: '',
+        teacher: '',
+        subject: '',
+        scheduledDate: '',
+        startTime: '',
+        endTime: '',
+        notes: ''
+      });
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      toast.error('Failed to create appointment');
+    }
+  };
+
+  const handleUpdateAppointment = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/appointments/${selectedAppointment._id}`, editFormData);
+      toast.success('Appointment updated successfully');
+      setShowEditModal(false);
+      setSelectedAppointment(null);
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      toast.error('Failed to update appointment');
+    }
+  };
+
+  const handleInputChange = (e, formType) => {
+    const { name, value } = e.target;
+    if (formType === 'create') {
+      setCreateFormData(prev => ({ ...prev, [name]: value }));
+    } else if (formType === 'edit') {
+      setEditFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -89,6 +180,10 @@ const Appointments = () => {
     if (user?.role === 'admin') return true;
     if (user?.role === 'teacher' && appointment.teacher === user._id) return true;
     return false;
+  };
+
+  const getRoleSpecificUsers = (role) => {
+    return users.filter(u => u.role === role && u.isActive);
   };
 
   return (
@@ -176,7 +271,7 @@ const Appointments = () => {
               <Calendar className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No appointments found</h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchTerm || statusFilter || dateFilter ? 'Try adjusting your search criteria.' : 'Get started by creating an appointment.'}
+                {searchTerm || statusFilter || dateFilter ? 'Try adjusting your search criteria.' : 'Get started by creating a new appointment.'}
               </p>
             </div>
           ) : (
@@ -228,7 +323,7 @@ const Appointments = () => {
                       <td className="table-cell">
                         <div className="flex space-x-2">
                           <button
-                            onClick={() => {/* TODO: Implement view appointment */}}
+                            onClick={() => handleViewAppointment(appointment)}
                             className="btn btn-sm btn-secondary"
                             title="View Appointment"
                           >
@@ -237,7 +332,7 @@ const Appointments = () => {
                           {canManageAppointment(appointment) && (
                             <>
                               <button
-                                onClick={() => {/* TODO: Implement edit appointment */}}
+                                onClick={() => handleEditAppointment(appointment)}
                                 className="btn btn-sm btn-primary"
                                 title="Edit Appointment"
                               >
@@ -290,24 +385,345 @@ const Appointments = () => {
         </div>
       )}
 
-      {/* Create Appointment Modal - Placeholder */}
+      {/* Create Appointment Modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="text-lg font-medium text-gray-900">Create New Appointment</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <div className="modal-body">
-              <p className="text-gray-600">
-                Appointment creation functionality will be implemented here.
-              </p>
-            </div>
+            <form onSubmit={handleCreateAppointment} className="modal-body">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Student
+                  </label>
+                  <select
+                    name="student"
+                    value={createFormData.student}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="">Select Student</option>
+                    {getRoleSpecificUsers('parent').map(user => (
+                      <option key={user._id} value={user._id}>
+                        {user.firstName} {user.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Teacher
+                  </label>
+                  <select
+                    name="teacher"
+                    value={createFormData.teacher}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="">Select Teacher</option>
+                    {getRoleSpecificUsers('teacher').map(user => (
+                      <option key={user._id} value={user._id}>
+                        {user.firstName} {user.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={createFormData.subject}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    name="scheduledDate"
+                    value={createFormData.scheduledDate}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={createFormData.startTime}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={createFormData.endTime}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    name="notes"
+                    value={createFormData.notes}
+                    onChange={(e) => handleInputChange(e, 'create')}
+                    className="input w-full"
+                    rows="3"
+                  />
+                </div>
+              </div>
+            </form>
             <div className="modal-footer">
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="btn btn-secondary"
               >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateAppointment}
+                className="btn btn-primary"
+              >
+                Create Appointment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Appointment Modal */}
+      {showViewModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="text-lg font-medium text-gray-900">Appointment Details</h3>
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Date & Time</label>
+                  <p className="text-sm text-gray-900">
+                    {formatDateTime(selectedAppointment.scheduledDate, selectedAppointment.startTime)}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Duration</label>
+                  <p className="text-sm text-gray-900">
+                    {selectedAppointment.startTime} - {selectedAppointment.endTime}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Subject</label>
+                  <p className="text-sm text-gray-900">{selectedAppointment.subject}</p>
+                </div>
+                {user?.role === 'admin' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Student</label>
+                      <p className="text-sm text-gray-900">
+                        {selectedAppointment.student?.firstName} {selectedAppointment.student?.lastName}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Teacher</label>
+                      <p className="text-sm text-gray-900">
+                        {selectedAppointment.teacher?.firstName} {selectedAppointment.teacher?.lastName}
+                      </p>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Status</label>
+                  <p className="text-sm text-gray-900">{getStatusBadge(selectedAppointment.status)}</p>
+                </div>
+                {selectedAppointment.notes && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Notes</label>
+                    <p className="text-sm text-gray-900">{selectedAppointment.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="btn btn-secondary"
+              >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Appointment Modal */}
+      {showEditModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="text-lg font-medium text-gray-900">Edit Appointment</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateAppointment} className="modal-body">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Student
+                  </label>
+                  <select
+                    name="student"
+                    value={editFormData.student}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="">Select Student</option>
+                    {getRoleSpecificUsers('parent').map(user => (
+                      <option key={user._id} value={user._id}>
+                        {user.firstName} {user.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Teacher
+                  </label>
+                  <select
+                    name="teacher"
+                    value={editFormData.teacher}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  >
+                    <option value="">Select Teacher</option>
+                    {getRoleSpecificUsers('teacher').map(user => (
+                      <option key={user._id} value={user._id}>
+                        {user.firstName} {user.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={editFormData.subject}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    name="scheduledDate"
+                    value={editFormData.scheduledDate}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={editFormData.startTime}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={editFormData.endTime}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    name="notes"
+                    value={editFormData.notes}
+                    onChange={(e) => handleInputChange(e, 'edit')}
+                    className="input w-full"
+                    rows="3"
+                  />
+                </div>
+              </div>
+            </form>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateAppointment}
+                className="btn btn-primary"
+              >
+                Update Appointment
               </button>
             </div>
           </div>

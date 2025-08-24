@@ -75,6 +75,80 @@ router.get('/:id', authenticateToken, requireOwnerOrAdmin('id'), async (req, res
   }
 });
 
+// @route   POST /api/users
+// @desc    Create new user (admin only)
+// @access  Private (Admin)
+router.post('/', [
+  authenticateToken,
+  requireAdmin,
+  [
+    body('firstName')
+      .trim()
+      .isLength({ min: 2, max: 50 })
+      .withMessage('First name must be between 2 and 50 characters'),
+    body('lastName')
+      .trim()
+      .isLength({ min: 2, max: 50 })
+      .withMessage('Last name must be between 2 and 50 characters'),
+    body('email')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('Please provide a valid email address'),
+    body('password')
+      .isLength({ min: 6 })
+      .withMessage('Password must be at least 6 characters long'),
+    body('role')
+      .isIn(['admin', 'teacher', 'parent'])
+      .withMessage('Role must be admin, teacher, or parent'),
+    body('phone')
+      .optional()
+      .matches(/^[\+]?[1-9][\d]{0,15}$/)
+      .withMessage('Please provide a valid phone number')
+  ]
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed', 
+        errors: errors.array() 
+      });
+    }
+
+    const { firstName, lastName, email, password, role, phone } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Create new user
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
+      phone,
+      isActive: true
+    });
+
+    await user.save();
+
+    // Return user without password
+    const userResponse = user.getPublicProfile();
+    res.status(201).json({ 
+      message: 'User created successfully',
+      user: userResponse 
+    });
+
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ message: 'Server error while creating user' });
+  }
+});
+
 // @route   PUT /api/users/:id
 // @desc    Update user by ID (admin or owner)
 // @access  Private
