@@ -51,10 +51,6 @@ const Users = () => {
   });
   const [newSubject, setNewSubject] = useState('');
 
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, searchTerm, roleFilter]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -75,6 +71,10 @@ const Users = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, searchTerm, roleFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDeleteUser = async (userId) => {
     if (!window.confirm('Are you sure you want to deactivate this user?')) {
