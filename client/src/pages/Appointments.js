@@ -3,9 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { api } from '../contexts/AuthContext';
 import { 
   Calendar, 
-  Clock, 
   Search, 
-  Filter, 
   Plus,
   Edit,
   Trash2,
@@ -46,7 +44,7 @@ const Appointments = () => {
     if (user?.role === 'admin') {
       fetchUsers();
     }
-  }, [currentPage, searchTerm, statusFilter, dateFilter]);
+  }, [currentPage, searchTerm, statusFilter, dateFilter, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAppointments = async () => {
     try {

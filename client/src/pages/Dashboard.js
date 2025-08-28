@@ -7,8 +7,6 @@ import {
   Clock, 
   Users, 
   BookOpen, 
-  TrendingUp, 
-  AlertCircle,
   CheckCircle,
   XCircle,
   ChevronDown,
@@ -37,7 +35,7 @@ const Dashboard = () => {
     if (user?.role === 'parent') {
       fetchStudents();
     }
-  }, [user, selectedStudent]);
+  }, [user, selectedStudent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDashboardData = async () => {
     try {

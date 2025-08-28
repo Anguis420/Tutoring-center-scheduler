@@ -10,10 +10,7 @@ import {
   Calendar,
   BookOpen,
   UserPlus,
-  X,
-  Clock,
-  GraduationCap,
-  Heart
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import moment from 'moment';
@@ -47,11 +44,7 @@ const Students = () => {
   });
   const [editFormData, setEditFormData] = useState({});
   const [newSubject, setNewSubject] = useState('');
-  const [newPreferredTime, setNewPreferredTime] = useState({
-    day: 'monday',
-    startTime: '',
-    endTime: ''
-  });
+
   const [parents, setParents] = useState([]);
 
   useEffect(() => {
@@ -222,48 +215,7 @@ const Students = () => {
     }
   };
 
-  const addPreferredTime = (formType) => {
-    if (!newPreferredTime.startTime || !newPreferredTime.endTime) return;
-    
-    if (formType === 'create') {
-      setCreateFormData(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          preferredTimes: [...prev.preferences.preferredTimes, { ...newPreferredTime }]
-        }
-      }));
-    } else if (formType === 'edit') {
-      setEditFormData(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          preferredTimes: [...prev.preferences.preferredTimes, { ...newPreferredTime }]
-        }
-      }));
-    }
-    setNewPreferredTime({ day: 'monday', startTime: '', endTime: '' });
-  };
 
-  const removePreferredTime = (index, formType) => {
-    if (formType === 'create') {
-      setCreateFormData(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          preferredTimes: prev.preferences.preferredTimes.filter((_, i) => i !== index)
-        }
-      }));
-    } else if (formType === 'edit') {
-      setEditFormData(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          preferredTimes: prev.preferences.preferredTimes.filter((_, i) => i !== index)
-        }
-      }));
-    }
-  };
 
   const getLearningStyleLabel = (style) => {
     const styles = {

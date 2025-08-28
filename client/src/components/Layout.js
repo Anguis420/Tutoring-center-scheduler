@@ -9,7 +9,6 @@ import {
   Calendar, 
   Clock, 
   User, 
-  LogOut,
   ChevronDown,
   Bell
 } from 'lucide-react';
