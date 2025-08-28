@@ -3,7 +3,6 @@ node_modules/
 client/node_modules/
 
 # Build outputs
-client/build/
 dist/
 
 # Environment files
