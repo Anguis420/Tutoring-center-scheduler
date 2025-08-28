@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -15,7 +16,9 @@ const appointmentRoutes = require('./routes/appointments');
 const studentRoutes = require('./routes/students');
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for development
+}));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -28,7 +31,7 @@ app.use('/api/', limiter);
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
+    ? [process.env.CORS_ORIGIN || 'https://yourdomain.com'] 
     : ['http://localhost:3000'],
   credentials: true
 }));
@@ -61,6 +64,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Serve static files from React build in production
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the React build directory
+  app.use(express.static(path.join(__dirname, 'client', 'build')));
+
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'build', 'index.html'));
+  });
+}
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -70,10 +84,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
+// 404 handler (only for API routes in development)
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/*', (req, res) => {
+    res.status(404).json({ message: 'API route not found' });
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 
