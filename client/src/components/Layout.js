@@ -26,6 +26,7 @@ const Layout = () => {
     { name: 'Appointments', href: '/appointments', icon: Calendar },
     ...(user?.role === 'admin' ? [{ name: 'Users', href: '/users', icon: Users }] : []),
     ...(user?.role === 'admin' || user?.role === 'teacher' ? [{ name: 'Schedules', href: '/schedules', icon: Clock }] : []),
+    ...(user?.role === 'parent' ? [{ name: 'Students', href: '/students', icon: Users }] : []),
   ];
 
   const handleLogout = () => {

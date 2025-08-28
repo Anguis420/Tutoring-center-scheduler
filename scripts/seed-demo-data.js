@@ -4,6 +4,7 @@ require('dotenv').config();
 
 // Import models
 const User = require('../models/User');
+const Student = require('../models/Student');
 
 // Demo data
 const demoUsers = [
@@ -103,20 +104,6 @@ const demoUsers = [
     lastName: 'Smith',
     role: 'parent',
     phone: '+1234567893',
-    children: [
-      {
-        name: 'Emma Smith',
-        age: 14,
-        grade: '9th Grade',
-        subjects: ['Mathematics', 'English']
-      },
-      {
-        name: 'Lucas Smith',
-        age: 12,
-        grade: '7th Grade',
-        subjects: ['Mathematics', 'Science']
-      }
-    ],
     isActive: true
   },
   {
@@ -126,15 +113,74 @@ const demoUsers = [
     lastName: 'Wilson',
     role: 'parent',
     phone: '+1234567894',
-    children: [
-      {
-        name: 'Sophia Wilson',
-        age: 16,
-        grade: '11th Grade',
-        subjects: ['Physics', 'Chemistry', 'Mathematics']
-      }
-    ],
     isActive: true
+  }
+];
+
+// Demo students data
+const demoStudents = [
+  {
+    firstName: 'Emma',
+    lastName: 'Smith',
+    dateOfBirth: '2009-05-15',
+    age: 14,
+    grade: '9th Grade',
+    subjects: ['Mathematics', 'English'],
+    notes: 'Emma is a bright student who excels in mathematics.',
+    emergencyContact: {
+      name: 'Jennifer Smith',
+      phone: '+1234567893',
+      relationship: 'Mother'
+    },
+    preferences: {
+      learningStyle: 'visual',
+      preferredTimes: [
+        { day: 'monday', startTime: '15:00', endTime: '17:00' },
+        { day: 'wednesday', startTime: '15:00', endTime: '17:00' }
+      ]
+    }
+  },
+  {
+    firstName: 'Lucas',
+    lastName: 'Smith',
+    dateOfBirth: '2011-08-22',
+    age: 12,
+    grade: '7th Grade',
+    subjects: ['Mathematics', 'Science'],
+    notes: 'Lucas shows great interest in science experiments.',
+    emergencyContact: {
+      name: 'Jennifer Smith',
+      phone: '+1234567893',
+      relationship: 'Mother'
+    },
+    preferences: {
+      learningStyle: 'kinesthetic',
+      preferredTimes: [
+        { day: 'tuesday', startTime: '16:00', endTime: '18:00' },
+        { day: 'thursday', startTime: '16:00', endTime: '18:00' }
+      ]
+    }
+  },
+  {
+    firstName: 'Sophia',
+    lastName: 'Wilson',
+    dateOfBirth: '2007-03-10',
+    age: 16,
+    grade: '11th Grade',
+    subjects: ['Physics', 'Chemistry', 'Mathematics'],
+    notes: 'Sophia is preparing for college applications.',
+    emergencyContact: {
+      name: 'David Wilson',
+      phone: '+1234567894',
+      relationship: 'Father'
+    },
+    preferences: {
+      learningStyle: 'mixed',
+      preferredTimes: [
+        { day: 'monday', startTime: '17:00', endTime: '19:00' },
+        { day: 'friday', startTime: '14:00', endTime: '16:00' }
+      ]
+    }
   }
 ];
 
@@ -144,9 +190,10 @@ async function seedDatabase() {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tutoring-center-scheduler');
     console.log('Connected to MongoDB');
 
-    // Clear existing users
+    // Clear existing data
     await User.deleteMany({});
-    console.log('Cleared existing users');
+    await Student.deleteMany({});
+    console.log('Cleared existing data');
 
     // Hash passwords and create users
     const hashedUsers = await Promise.all(
@@ -164,10 +211,36 @@ async function seedDatabase() {
     const createdUsers = await User.insertMany(hashedUsers);
     console.log(`Created ${createdUsers.length} demo users`);
 
+    // Find parent users
+    const parent1 = createdUsers.find(u => u.email === 'parent@tutoring.com');
+    const parent2 = createdUsers.find(u => u.email === 'parent2@tutoring.com');
+
+    // Create students with parent references
+    const studentsWithParents = demoStudents.map((student, index) => {
+      if (index < 2) {
+        // First two students belong to parent1 (Jennifer Smith)
+        return { ...student, parent: parent1._id };
+      } else {
+        // Third student belongs to parent2 (David Wilson)
+        return { ...student, parent: parent2._id };
+      }
+    });
+
+    // Insert students
+    const createdStudents = await Student.insertMany(studentsWithParents);
+    console.log(`Created ${createdStudents.length} demo students`);
+
     // Display created users
     console.log('\nDemo users created:');
     createdUsers.forEach(user => {
       console.log(`- ${user.role.toUpperCase()}: ${user.email} (${user.firstName} ${user.lastName})`);
+    });
+
+    // Display created students
+    console.log('\nDemo students created:');
+    createdStudents.forEach(student => {
+      const parent = createdUsers.find(u => u._id.toString() === student.parent.toString());
+      console.log(`- ${student.firstName} ${student.lastName} (Grade ${student.grade}) - Parent: ${parent.firstName} ${parent.lastName}`);
     });
 
     console.log('\nDatabase seeding completed successfully!');

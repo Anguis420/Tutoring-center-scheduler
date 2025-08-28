@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const scheduleRoutes = require('./routes/schedules');
 const appointmentRoutes = require('./routes/appointments');
+const studentRoutes = require('./routes/students');
 
 // Security middleware
 app.use(helmet());
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/students', studentRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

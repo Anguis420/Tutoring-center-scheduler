@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Appointments from './pages/Appointments';
 import Schedules from './pages/Schedules';
+import Students from './pages/Students';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
@@ -67,6 +68,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'teacher']}>
                 <Schedules />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Parent Routes */}
+          <Route 
+            path="students" 
+            element={
+              <ProtectedRoute allowedRoles={['parent']}>
+                <Students />
               </ProtectedRoute>
             } 
           />

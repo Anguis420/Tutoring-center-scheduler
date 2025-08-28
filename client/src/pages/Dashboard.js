@@ -10,7 +10,10 @@ import {
   TrendingUp, 
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  ChevronDown,
+  User,
+  Plus
 } from 'lucide-react';
 import moment from 'moment';
 
@@ -25,21 +28,38 @@ const Dashboard = () => {
   });
   const [recentAppointments, setRecentAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showStudentSelector, setShowStudentSelector] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+    if (user?.role === 'parent') {
+      fetchStudents();
+    }
+  }, [user, selectedStudent]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Fetch appointments for the user
-      const appointmentsResponse = await api.get('/appointments', {
-        params: { limit: 10 }
-      });
+      // Fetch appointments for the user or selected student
+      let appointmentsResponse;
+      if (user?.role === 'parent' && selectedStudent) {
+        // Get appointments for specific student
+        appointmentsResponse = await api.get(`/students/${selectedStudent._id}/appointments`);
+        const appointments = appointmentsResponse.data.appointments;
+        setRecentAppointments(appointments.slice(0, 5));
+      } else {
+        // Get appointments for the user
+        appointmentsResponse = await api.get('/appointments', {
+          params: { limit: 10 }
+        });
+        const appointments = appointmentsResponse.data.appointments;
+        setRecentAppointments(appointments.slice(0, 5));
+      }
       
-      const appointments = appointmentsResponse.data.appointments;
+      const appointments = recentAppointments;
       
       // Calculate statistics
       const now = new Date();
@@ -62,11 +82,25 @@ const Dashboard = () => {
         cancelledAppointments: cancelled,
       });
 
-      setRecentAppointments(appointments.slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStudents = async () => {
+    try {
+      const response = await api.get('/students');
+      const fetchedStudents = response.data.students;
+      setStudents(fetchedStudents);
+      
+      // Auto-select first student if available
+      if (fetchedStudents.length > 0 && !selectedStudent) {
+        setSelectedStudent(fetchedStudents[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
     }
   };
 
@@ -87,6 +121,9 @@ const Dashboard = () => {
         break;
       case 'requestReschedule':
         navigate('/appointments');
+        break;
+      case 'manageStudents':
+        navigate('/students');
         break;
       default:
         break;
@@ -208,17 +245,71 @@ const Dashboard = () => {
       case 'parent':
         return (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Student Selector */}
             <div className="card">
               <div className="card-header">
-                <h3 className="text-lg font-medium text-gray-900">Children's Progress</h3>
+                <h3 className="text-lg font-medium text-gray-900">Current Student</h3>
               </div>
               <div className="card-body">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary-600">
-                    {user?.children?.length || 0}
+                {students.length === 0 ? (
+                  <div className="text-center py-4">
+                    <User className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500 mb-3">No students added yet</p>
+                    <p className="text-xs text-gray-400">Contact an administrator to add students to your account</p>
                   </div>
-                  <div className="text-sm text-gray-500">Active Students</div>
-                </div>
+                ) : (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowStudentSelector(!showStudentSelector)}
+                      className="w-full flex items-center justify-between p-3 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <div className="flex items-center">
+                        <User className="h-5 w-5 text-primary-600 mr-2" />
+                        <span className="text-sm font-medium text-gray-900">
+                          {selectedStudent ? `${selectedStudent.firstName} ${selectedStudent.lastName}` : 'Select Student'}
+                        </span>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showStudentSelector ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {showStudentSelector && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                        {students.map((student) => (
+                          <button
+                            key={student._id}
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setShowStudentSelector(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                              selectedStudent?._id === student._id ? 'bg-primary-50 text-primary-700' : 'text-gray-900'
+                            }`}
+                          >
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 mr-2" />
+                              {student.firstName} {student.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500 ml-6">
+                              Grade {student.grade} • Age {student.currentAge}
+                            </div>
+                          </button>
+                        ))}
+                        <div className="border-t border-gray-200">
+                          <button
+                            onClick={() => {
+                              setShowStudentSelector(false);
+                              handleQuickAction('manageStudents');
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-primary-600 hover:bg-primary-50"
+                          >
+                            <Plus className="h-4 w-4 mr-2 inline" />
+                            Manage Students
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -271,7 +362,10 @@ const Dashboard = () => {
               Welcome back, {user?.firstName || 'User'}!
             </h1>
             <p className="text-gray-600">
-              Here's what's happening with your {user?.role === 'admin' ? 'tutoring center' : 'schedule'} today.
+              {user?.role === 'parent' && selectedStudent 
+                ? `Here's what's happening with ${selectedStudent.firstName}'s schedule today.`
+                : `Here's what's happening with your ${user?.role === 'admin' ? 'tutoring center' : 'schedule'} today.`
+              }
             </p>
           </div>
           <div className="text-right">
@@ -356,7 +450,12 @@ const Dashboard = () => {
       {/* Recent Appointments */}
       <div className="card">
         <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900">Recent Appointments</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            {user?.role === 'parent' && selectedStudent 
+              ? `${selectedStudent.firstName}'s Recent Appointments`
+              : 'Recent Appointments'
+            }
+          </h3>
         </div>
         <div className="card-body">
           {recentAppointments.length === 0 ? (
@@ -366,6 +465,8 @@ const Dashboard = () => {
               <p className="mt-1 text-sm text-gray-500">
                 {user?.role === 'admin' 
                   ? 'Create some appointments to get started.' 
+                  : user?.role === 'parent' && selectedStudent
+                  ? `${selectedStudent.firstName} doesn't have any appointments yet.`
                   : 'You don\'t have any appointments yet.'}
               </p>
             </div>
