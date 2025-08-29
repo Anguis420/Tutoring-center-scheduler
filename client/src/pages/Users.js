@@ -53,7 +53,7 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, searchTerm, roleFilter]);
+  }, [currentPage, searchTerm, roleFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUsers = async () => {
     try {
