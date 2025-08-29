@@ -8,8 +8,10 @@
     "dev": "nodemon server.js",
     "client": "cd client && npm start",
     "build": "cd client && npm run build",
+    "build:netlify": "cd client && npm run build:netlify",
     "install-client": "cd client && npm install",
     "heroku-postbuild": "npm run install-client && npm run build",
+    "netlify-build": "npm run install-client && npm run build:netlify",
     "seed": "node scripts/seed-demo-data.js"
   },
   "keywords": [

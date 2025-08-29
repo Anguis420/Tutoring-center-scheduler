@@ -207,7 +207,26 @@ npm start
 - **AWS**: EC2, Elastic Beanstalk, or Lambda
 - **DigitalOcean**: App Platform or Droplets
 - **Vercel**: Frontend deployment
-- **Netlify**: Frontend deployment
+- **Netlify**: Frontend deployment (recommended)
+
+### Netlify Deployment
+```bash
+# 1. Build the application
+npm run netlify-build
+
+# 2. Deploy to Netlify
+# - Connect your GitHub repository to Netlify
+# - Build command: npm run netlify-build
+# - Publish directory: client/build
+# - Set environment variables in Netlify dashboard
+```
+
+### Backend Deployment
+Deploy your backend separately to:
+- **Heroku**: Easy deployment with MongoDB Atlas
+- **Railway**: Simple deployment with built-in database
+- **Render**: Free tier available
+- **DigitalOcean**: More control, requires setup
 
 ## 🔒 Security Features
 
