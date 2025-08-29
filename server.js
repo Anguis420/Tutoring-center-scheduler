@@ -31,7 +31,8 @@ app.use(cors({
     ? [
         'https://friendly-moonbeam-85bd7c.netlify.app',
         'https://classy-tiramify-5871d3.netlify.app',
-        'https://horologeist.netlify.app'
+        'https://horologeist.netlify.app',
+        'https://horologiest.netlify.app'
       ] 
     : ['http://localhost:3000'],
   credentials: true
