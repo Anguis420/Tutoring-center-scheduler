@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta
+      name="description"
+      content="Tutoring Center Scheduling System - Comprehensive web-based platform for managing student-teacher appointments efficiently"
+    />
+    <meta name="keywords" content="tutoring, scheduling, education, appointments, students, teachers" />
+    <meta name="author" content="Tutoring Center Team" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="%PUBLIC_URL%" />
+    <meta property="og:title" content="Tutoring Center Scheduler" />
+    <meta property="og:description" content="Streamline your tutoring center operations with our comprehensive scheduling platform" />
+    <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="%PUBLIC_URL%" />
+    <meta property="twitter:title" content="Tutoring Center Scheduler" />
+    <meta property="twitter:description" content="Streamline your tutoring center operations with our comprehensive scheduling platform" />
+    <meta property="twitter:image" content="%PUBLIC_URL%/og-image.png" />
+
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="%PUBLIC_URL%/static/css/main.chunk.css" as="style" />
+    
+    <title>Tutoring Center Scheduler</title>
+    
+    <!-- Loading styles -->
+    <style>
+      /* Loading screen styles */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        color: white;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      }
+      
+      .loading-logo {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+      }
+      
+      .loading-logo svg {
+        width: 40px;
+        height: 40px;
+        color: white;
+      }
+      
+      .loading-text {
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 10px;
+      }
+      
+      .loading-subtext {
+        font-size: 14px;
+        opacity: 0.8;
+        text-align: center;
+        max-width: 300px;
+        line-height: 1.5;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top: 3px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-top: 20px;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+      }
+      
+      /* Hide loading screen when app loads */
+      .app-loaded #loading-screen {
+        display: none;
+      }
+      
+      /* Fallback for older browsers */
+      .no-js #loading-screen {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      </div>
+      <div class="loading-text">Tutoring Center Scheduler</div>
+      <div class="loading-subtext">Loading your educational management platform...</div>
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- No JavaScript Fallback -->
+    <noscript>
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f3f4f6;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      ">
+        <div style="
+          background: #ef4444;
+          color: white;
+          padding: 20px;
+          border-radius: 8px;
+          max-width: 500px;
+        ">
+          <h1 style="margin: 0 0 20px 0; font-size: 24px;">JavaScript Required</h1>
+          <p style="margin: 0 0 20px 0; line-height: 1.6;">
+            The Tutoring Center Scheduler requires JavaScript to function properly. 
+            Please enable JavaScript in your browser and refresh the page.
+          </p>
+          <p style="margin: 0; font-size: 14px; opacity: 0.8;">
+            If you continue to have issues, please contact your system administrator.
+          </p>
+        </div>
+      </div>
+    </noscript>
+
+    <!-- React App Root -->
+    <div id="root"></div>
+
+    <!-- Service Worker Registration -->
+    <script>
+      // Check if service worker is supported
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+      
+      // Hide loading screen when React app loads
+      window.addEventListener('load', function() {
+        // Small delay to ensure smooth transition
+        setTimeout(function() {
+          document.body.classList.add('app-loaded');
+        }, 500);
+      });
+      
+      // Fallback for older browsers
+      document.documentElement.classList.add('no-js');
+    </script>
+  </body>
+</html>

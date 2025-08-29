@@ -42,8 +42,10 @@
 # Environment variables for build
 [context.production.environment]
   NODE_ENV = "production"
-  REACT_APP_API_URL = "https://your-backend-domain.com"
+  # IMPORTANT: Set this to your actual backend URL in Netlify dashboard
+  # REACT_APP_API_URL = "https://your-backend-domain.com/api"
 
 [context.deploy-preview.environment]
   NODE_ENV = "production"
-  REACT_APP_API_URL = "https://your-backend-domain.com"
+  # IMPORTANT: Set this to your actual backend URL in Netlify dashboard
+  # REACT_APP_API_URL = "https://your-backend-domain.com/api"
