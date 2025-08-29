@@ -109,3 +109,5 @@ test-login.js
 
 # Uploads
 uploads/ 
+# Local Netlify folder
+.netlify
