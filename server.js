@@ -28,7 +28,11 @@ app.use('/api/', limiter);
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
+    ? [
+        'https://friendly-moonbeam-85bd7c.netlify.app',
+        'https://classy-tiramify-5871d3.netlify.app',
+        'https://horologeist.netlify.app'
+      ] 
     : ['http://localhost:3000'],
   credentials: true
 }));
