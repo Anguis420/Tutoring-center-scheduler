@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../contexts/AuthContext';
 import { 
-  Clock, 
   Search, 
   Calendar,
   User,
@@ -10,8 +9,7 @@ import {
   CheckCircle,
   X,
   Filter,
-  RefreshCw,
-  Plus
+  RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import moment from 'moment';
@@ -29,7 +27,6 @@ const AvailableSchedules = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [students, setStudents] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState('');
   const [bookingFormData, setBookingFormData] = useState({
     student: '',
     subject: '',
@@ -41,13 +38,7 @@ const AvailableSchedules = () => {
   const [teachers, setTeachers] = useState([]);
   const [availableDates, setAvailableDates] = useState([]);
 
-  useEffect(() => {
-    fetchSchedules();
-    fetchStudents();
-    fetchTeachers();
-  }, [currentPage, searchTerm, dayFilter, subjectFilter, teacherFilter]);
-
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -69,7 +60,13 @@ const AvailableSchedules = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, dayFilter, subjectFilter, teacherFilter]);
+
+  useEffect(() => {
+    fetchSchedules();
+    fetchStudents();
+    fetchTeachers();
+  }, [fetchSchedules]);
 
   const fetchStudents = async () => {
     try {
