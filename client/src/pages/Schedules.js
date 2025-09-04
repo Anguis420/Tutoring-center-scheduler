@@ -117,6 +117,13 @@ const Schedules = () => {
 
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!createFormData.teacher || !createFormData.startTime || !createFormData.endTime) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
     try {
       await api.post('/schedules', createFormData);
       toast.success('Schedule created successfully');
@@ -134,7 +141,12 @@ const Schedules = () => {
       fetchSchedules();
     } catch (error) {
       console.error('Error creating schedule:', error);
-      toast.error('Failed to create schedule');
+      if (error.response?.data?.errors) {
+        const errorMessages = error.response.data.errors.map(err => err.msg).join(', ');
+        toast.error(`Validation failed: ${errorMessages}`);
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to create schedule');
+      }
     }
   };
 
