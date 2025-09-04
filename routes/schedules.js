@@ -125,6 +125,80 @@ router.post('/', [
   }
 });
 
+// @route   GET /api/schedules/daily/:date
+// @desc    Get teacher's daily schedule with student appointments
+// @access  Private (teacher only)
+router.get('/daily/:date', [
+  authenticateToken,
+  requireTeacher
+], async (req, res) => {
+  try {
+    const { date } = req.params;
+    const scheduleDate = new Date(date);
+    const dayOfWeek = scheduleDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+
+    // Get teacher's schedules for this day
+    const schedules = await Schedule.find({
+      teacher: req.user._id,
+      dayOfWeek: dayOfWeek,
+      isAvailable: true
+    }).populate('teacher');
+
+    // Get appointments for this date
+    const startOfDay = new Date(scheduleDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(scheduleDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const appointments = await Appointment.find({
+      teacher: req.user._id,
+      scheduledDate: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: { $nin: ['cancelled'] }
+    })
+    .populate('student')
+    .sort({ startTime: 1 });
+
+    // Group appointments by schedule time slots
+    const scheduleWithStudents = schedules.map(schedule => {
+      const scheduleAppointments = appointments.filter(apt => 
+        apt.startTime === schedule.startTime && 
+        apt.endTime === schedule.endTime
+      );
+
+      return {
+        ...schedule.toObject(),
+        students: scheduleAppointments.map(apt => ({
+          _id: apt.student._id,
+          firstName: apt.student.firstName,
+          lastName: apt.student.lastName,
+          fullName: apt.student.fullName,
+          grade: apt.student.grade,
+          subject: apt.subject,
+          appointmentId: apt._id,
+          status: apt.status,
+          notes: apt.notes
+        })),
+        totalBooked: scheduleAppointments.length,
+        availableSlots: schedule.maxStudents - scheduleAppointments.length
+      };
+    });
+
+    res.json({
+      date: scheduleDate,
+      dayOfWeek,
+      schedules: scheduleWithStudents,
+      totalAppointments: appointments.length
+    });
+
+  } catch (error) {
+    console.error('Get daily schedule error:', error);
+    res.status(500).json({ message: 'Server error while fetching daily schedule' });
+  }
+});
+
 // @route   GET /api/schedules
 // @desc    Get schedules with filters
 // @access  Private

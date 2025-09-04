@@ -11,7 +11,9 @@ import {
   RefreshCw,
   User,
   X,
-  BookOpen
+  BookOpen,
+  Calendar,
+  Users
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -41,13 +43,20 @@ const Schedules = () => {
   const [editFormData, setEditFormData] = useState({});
   const [users, setUsers] = useState([]);
   const [newSubject, setNewSubject] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dailySchedules, setDailySchedules] = useState([]);
+  const [viewMode, setViewMode] = useState('weekly'); // 'weekly' or 'daily'
 
   useEffect(() => {
-    fetchSchedules();
+    if (user?.role === 'teacher' && viewMode === 'daily') {
+      fetchDailySchedules(selectedDate);
+    } else {
+      fetchSchedules();
+    }
     if (user?.role === 'admin') {
       fetchUsers();
     }
-  }, [currentPage, searchTerm, dayFilter, teacherFilter, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, searchTerm, dayFilter, teacherFilter, user?.role, viewMode, selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchSchedules = async () => {
     try {
@@ -66,6 +75,19 @@ const Schedules = () => {
     } catch (error) {
       console.error('Error fetching schedules:', error);
       toast.error('Failed to fetch schedules');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDailySchedules = async (date) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/schedules/daily/${date}`);
+      setDailySchedules(response.data.schedules);
+    } catch (error) {
+      console.error('Error fetching daily schedules:', error);
+      toast.error('Failed to fetch daily schedule');
     } finally {
       setLoading(false);
     }
@@ -264,6 +286,8 @@ const Schedules = () => {
           <p className="text-gray-600">
             {user?.role === 'parent' 
               ? 'View available teacher schedules and book appointments' 
+              : user?.role === 'teacher'
+              ? 'Manage your availability and view student appointments'
               : 'Manage teacher availability and schedules'
             }
           </p>
@@ -286,12 +310,30 @@ const Schedules = () => {
             Book Appointments
           </a>
         )}
+        {user?.role === 'teacher' && (
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setViewMode('weekly')}
+              className={`btn ${viewMode === 'weekly' ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Weekly View
+            </button>
+            <button
+              onClick={() => setViewMode('daily')}
+              className={`btn ${viewMode === 'daily' ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Daily View
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filters and Search */}
       <div className="card">
         <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 gap-4 ${user?.role === 'teacher' && viewMode === 'daily' ? 'md:grid-cols-2' : 'md:grid-cols-4'}`}>
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -303,6 +345,21 @@ const Schedules = () => {
                 className="input pl-10"
               />
             </div>
+
+            {/* Date Picker for Teachers in Daily View */}
+            {user?.role === 'teacher' && viewMode === 'daily' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Date
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="input"
+                />
+              </div>
+            )}
 
             {/* Day Filter */}
             <select
@@ -349,13 +406,92 @@ const Schedules = () => {
       {/* Schedules Table */}
       <div className="card">
         <div className="card-header">
-          <h3 className="text-lg font-medium text-gray-900">Schedules</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            {user?.role === 'teacher' && viewMode === 'daily' 
+              ? `Daily Schedule - ${new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`
+              : 'Schedules'
+            }
+          </h3>
         </div>
         <div className="card-body">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="loading-spinner h-8 w-8"></div>
             </div>
+          ) : user?.role === 'teacher' && viewMode === 'daily' ? (
+            // Daily View for Teachers
+            dailySchedules.length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No schedules for this day</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  You don't have any scheduled time slots for {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {dailySchedules.map((schedule) => (
+                  <div key={schedule._id} className="border rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <span className="font-medium text-gray-900">
+                            {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-gray-600">
+                            {schedule.totalBooked}/{schedule.maxStudents} students
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        {schedule.subjects?.map((subject, index) => (
+                          <span key={index} className="badge badge-secondary text-xs">
+                            {subject}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {schedule.students && schedule.students.length > 0 ? (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-gray-700">Students:</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {schedule.students.map((student) => (
+                            <div key={student._id} className="flex items-center justify-between p-2 bg-white rounded border">
+                              <div>
+                                <div className="font-medium text-sm text-gray-900">
+                                  {student.firstName} {student.lastName}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Grade {student.grade} • {student.subject}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className={`badge text-xs ${
+                                  student.status === 'confirmed' ? 'badge-success' :
+                                  student.status === 'pending' ? 'badge-warning' :
+                                  'badge-secondary'
+                                }`}>
+                                  {student.status}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500 italic">
+                        No students booked for this time slot
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
           ) : schedules.length === 0 ? (
             <div className="text-center py-8">
               <Clock className="mx-auto h-12 w-12 text-gray-400" />
