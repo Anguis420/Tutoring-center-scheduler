@@ -206,7 +206,6 @@ npm start
 - **Heroku**: Easy deployment with Git integration
 - **AWS**: EC2, Elastic Beanstalk, or Lambda
 - **DigitalOcean**: App Platform or Droplets
-- **Vercel**: Frontend deployment
 - **Netlify**: Frontend deployment (recommended)
 
 ### Netlify Deployment

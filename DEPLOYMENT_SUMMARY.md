@@ -7,7 +7,7 @@ Your Tutoring Center Scheduler is now optimized for Netlify deployment!
 ### 1. Netlify Configuration Files
 - **`netlify.toml`** - Main Netlify configuration
 - **`client/public/_redirects`** - SPA routing support
-- **Updated `.gitignore`** - Removed Vercel-specific exclusions
+- **Updated `.gitignore`** - Cleaned up deployment-specific exclusions
 
 ### 2. Build Scripts
 - **`npm run netlify-build`** - Optimized build for Netlify
