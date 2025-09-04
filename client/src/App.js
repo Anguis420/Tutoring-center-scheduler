@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Appointments from './pages/Appointments';
 import Schedules from './pages/Schedules';
+import AvailableSchedules from './pages/AvailableSchedules';
 import Students from './pages/Students';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
@@ -66,13 +67,21 @@ function App() {
           <Route 
             path="schedules" 
             element={
-              <ProtectedRoute allowedRoles={['admin', 'teacher']}>
+              <ProtectedRoute allowedRoles={['admin', 'teacher', 'parent']}>
                 <Schedules />
               </ProtectedRoute>
             } 
           />
           
           {/* Parent Routes */}
+          <Route 
+            path="available-schedules" 
+            element={
+              <ProtectedRoute allowedRoles={['parent']}>
+                <AvailableSchedules />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="students" 
             element={

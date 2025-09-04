@@ -445,6 +445,161 @@ router.get('/upcoming/:userId', authenticateToken, async (req, res) => {
   }
 });
 
+// @route   POST /api/appointments/book-from-schedule
+// @desc    Book appointment from available schedule (parent only)
+// @access  Private (Parent)
+router.post('/book-from-schedule', [
+  authenticateToken,
+  [
+    body('student')
+      .isMongoId()
+      .withMessage('Valid student ID is required'),
+    body('teacher')
+      .isMongoId()
+      .withMessage('Valid teacher ID is required'),
+    body('subject')
+      .trim()
+      .notEmpty()
+      .withMessage('Subject is required'),
+    body('scheduledDate')
+      .isISO8601()
+      .withMessage('Valid scheduled date is required'),
+    body('startTime')
+      .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .withMessage('Valid start time is required (HH:MM)'),
+    body('endTime')
+      .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .withMessage('Valid end time is required (HH:MM)'),
+    body('location')
+      .optional()
+      .isIn(['in-person', 'online', 'hybrid'])
+      .withMessage('Location must be in-person, online, or hybrid'),
+    body('notes')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Notes cannot exceed 500 characters')
+  ]
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
+    }
+
+    // Only parents can book from schedules
+    if (req.user.role !== 'parent') {
+      return res.status(403).json({ message: 'Only parents can book appointments from schedules' });
+    }
+
+    const { 
+      student, 
+      teacher, 
+      subject, 
+      scheduledDate, 
+      startTime, 
+      endTime, 
+      location, 
+      notes 
+    } = req.body;
+
+    // Check if student and teacher exist
+    const [studentUser, teacherUser] = await Promise.all([
+      User.findById(student),
+      User.findById(teacher)
+    ]);
+
+    if (!studentUser || !teacherUser) {
+      return res.status(404).json({ message: 'Student or teacher not found' });
+    }
+
+    if (studentUser.role !== 'parent' || teacherUser.role !== 'teacher') {
+      return res.status(400).json({ message: 'Invalid student or teacher role' });
+    }
+
+    // Check if the student belongs to the parent
+    const parentUser = await User.findById(req.user._id);
+    const childExists = parentUser.children.some(child => child._id.toString() === student);
+    if (!childExists) {
+      return res.status(403).json({ message: 'You can only book appointments for your own children' });
+    }
+
+    // Check if there's an available schedule for this teacher, day, and time
+    const scheduleDate = new Date(scheduledDate);
+    const dayOfWeek = scheduleDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    
+    const availableSchedule = await Schedule.findOne({
+      teacher: teacher,
+      dayOfWeek: dayOfWeek,
+      startTime: { $lte: startTime },
+      endTime: { $gte: endTime },
+      isAvailable: true,
+      subjects: { $in: [subject] },
+      currentBookings: { $lt: { $expr: { $multiply: ['$maxStudents', 1] } } }
+    });
+
+    if (!availableSchedule) {
+      return res.status(400).json({ 
+        message: 'No available schedule found for this teacher, day, time, and subject' 
+      });
+    }
+
+    // Check if the schedule has capacity
+    if (availableSchedule.currentBookings >= availableSchedule.maxStudents) {
+      return res.status(400).json({ message: 'This schedule is fully booked' });
+    }
+
+    // Check for scheduling conflicts
+    const conflicts = await Appointment.findConflicts(teacher, scheduledDate, startTime, endTime);
+    if (conflicts.length > 0) {
+      return res.status(400).json({ 
+        message: 'Scheduling conflict detected',
+        conflicts: conflicts.map(c => ({
+          id: c._id,
+          startTime: c.startTime,
+          endTime: c.endTime,
+          student: c.student
+        }))
+      });
+    }
+
+    // Create appointment
+    const appointment = new Appointment({
+      student,
+      teacher,
+      subject,
+      scheduledDate,
+      startTime,
+      endTime,
+      location: location || 'in-person',
+      notes,
+      status: 'scheduled'
+    });
+
+    await appointment.save();
+
+    // Update schedule booking count
+    availableSchedule.currentBookings += 1;
+    await availableSchedule.save();
+
+    // Populate student and teacher details
+    await appointment.populate('student teacher');
+
+    res.status(201).json({
+      message: 'Appointment booked successfully',
+      appointment
+    });
+
+  } catch (error) {
+    console.error('Book appointment from schedule error:', error);
+    res.status(500).json({ message: 'Server error while booking appointment' });
+  }
+});
+
 // @route   GET /api/appointments/conflicts
 // @desc    Check for scheduling conflicts
 // @access  Private (Admin, Teacher)

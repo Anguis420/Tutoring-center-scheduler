@@ -237,4 +237,23 @@ scheduleSchema.methods.decrementBookings = function() {
   throw new Error('No bookings to decrement');
 };
 
+// Method to check if schedule is bookable
+scheduleSchema.methods.isBookable = function() {
+  return this.isAvailable && this.currentBookings < this.maxStudents;
+};
+
+// Method to get booking status
+scheduleSchema.methods.getBookingStatus = function() {
+  if (!this.isAvailable) {
+    return { status: 'unavailable', message: 'Schedule is not available' };
+  }
+  if (this.currentBookings >= this.maxStudents) {
+    return { status: 'fully-booked', message: 'Schedule is fully booked' };
+  }
+  if (this.currentBookings >= this.maxStudents * 0.8) {
+    return { status: 'almost-full', message: 'Schedule is almost full' };
+  }
+  return { status: 'available', message: 'Schedule is available for booking' };
+};
+
 module.exports = mongoose.model('Schedule', scheduleSchema); 

@@ -10,7 +10,8 @@ import {
   Eye,
   RefreshCw,
   User,
-  X
+  X,
+  BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -230,7 +231,7 @@ const Schedules = () => {
     return users.filter(u => u.role === role && u.isActive);
   };
 
-  if (!['admin', 'teacher'].includes(user?.role)) {
+  if (!['admin', 'teacher', 'parent'].includes(user?.role)) {
     return (
       <div className="text-center py-12">
         <Clock className="mx-auto h-12 w-12 text-gray-400" />
@@ -248,7 +249,12 @@ const Schedules = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Schedules</h1>
-          <p className="text-gray-600">Manage teacher availability and schedules</p>
+          <p className="text-gray-600">
+            {user?.role === 'parent' 
+              ? 'View available teacher schedules and book appointments' 
+              : 'Manage teacher availability and schedules'
+            }
+          </p>
         </div>
         {user?.role === 'admin' && (
           <button
@@ -258,6 +264,15 @@ const Schedules = () => {
             <Plus className="h-4 w-4 mr-2" />
             Create Schedule
           </button>
+        )}
+        {user?.role === 'parent' && (
+          <a
+            href="/available-schedules"
+            className="btn btn-primary"
+          >
+            <BookOpen className="h-4 w-4 mr-2" />
+            Book Appointments
+          </a>
         )}
       </div>
 
@@ -413,7 +428,15 @@ const Schedules = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          {canManageSchedule(schedule) && (
+                          {user?.role === 'parent' ? (
+                            <a
+                              href="/available-schedules"
+                              className="btn btn-sm btn-primary"
+                              title="Book Appointment"
+                            >
+                              <BookOpen className="h-4 w-4" />
+                            </a>
+                          ) : canManageSchedule(schedule) && (
                             <>
                               <button
                                 onClick={() => handleEditSchedule(schedule)}

@@ -319,10 +319,17 @@ const Dashboard = () => {
                 <div className="space-y-3">
                   <button 
                     className="btn btn-primary w-full"
-                    onClick={() => handleQuickAction('viewSchedule')}
+                    onClick={() => navigate('/available-schedules')}
                   >
                     <Calendar className="h-4 w-4 mr-2" />
-                    View Schedule
+                    Book Appointments
+                  </button>
+                  <button 
+                    className="btn btn-secondary w-full"
+                    onClick={() => handleQuickAction('viewSchedule')}
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                    View Schedules
                   </button>
                   <button 
                     className="btn btn-secondary w-full"
