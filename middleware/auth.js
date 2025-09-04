@@ -98,6 +98,50 @@ const requireOwnerOrAdmin = (resourceField = 'userId') => {
   };
 };
 
+// Middleware to check if user can access schedule (teacher owner or admin)
+const requireScheduleAccess = () => {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Admin can access everything
+      if (req.user.role === 'admin') {
+        return next();
+      }
+
+      const scheduleId = req.params.id;
+      if (!scheduleId) {
+        return res.status(400).json({ message: 'Schedule ID required' });
+      }
+
+      // Import here to avoid circular dependency
+      const Schedule = require('../models/Schedule');
+      const schedule = await Schedule.findById(scheduleId);
+
+      if (!schedule) {
+        return res.status(404).json({ message: 'Schedule not found' });
+      }
+
+      // Check if user is the teacher who owns this schedule
+      if (req.user.role === 'teacher') {
+        if (req.user._id.toString() !== schedule.teacher.toString()) {
+          return res.status(403).json({ message: 'Access denied. You can only manage your own schedules.' });
+        }
+      } else {
+        return res.status(403).json({ message: 'Access denied. Only teachers and admins can manage schedules.' });
+      }
+
+      req.schedule = schedule;
+      next();
+    } catch (error) {
+      console.error('Schedule access middleware error:', error);
+      res.status(500).json({ message: 'Error checking schedule access' });
+    }
+  };
+};
+
 // Middleware to check if user can access appointment (student, teacher, or admin)
 const requireAppointmentAccess = () => {
   return async (req, res, next) => {
@@ -158,5 +202,6 @@ module.exports = {
   requireAdminOrTeacher,
   requireAdminOrParent,
   requireOwnerOrAdmin,
+  requireScheduleAccess,
   requireAppointmentAccess
 }; 

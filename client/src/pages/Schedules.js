@@ -235,7 +235,7 @@ const Schedules = () => {
 
   const canManageSchedule = (schedule) => {
     if (user?.role === 'admin') return true;
-    if (user?.role === 'teacher' && schedule.teacher === user._id) return true;
+    if (user?.role === 'teacher' && schedule.teacher?._id === user._id) return true;
     return false;
   };
 

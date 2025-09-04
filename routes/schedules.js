@@ -7,7 +7,8 @@ const {
   requireAdmin, 
   requireTeacher,
   requireOwnerOrAdmin,
-  requireAdminOrTeacher
+  requireAdminOrTeacher,
+  requireScheduleAccess
 } = require('../middleware/auth');
 
 const router = express.Router();
@@ -213,7 +214,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // @access  Private (admin or teacher owner)
 router.put('/:id', [
   authenticateToken,
-  requireOwnerOrAdmin('teacher'),
+  requireScheduleAccess(),
   [
     body('dayOfWeek')
       .optional()
@@ -336,7 +337,7 @@ router.put('/:id', [
 // @access  Private (admin or teacher owner)
 router.delete('/:id', [
   authenticateToken,
-  requireOwnerOrAdmin('teacher')
+  requireScheduleAccess()
 ], async (req, res) => {
   try {
     const schedule = await Schedule.findById(req.params.id);
@@ -422,7 +423,7 @@ router.get('/available', authenticateToken, async (req, res) => {
 // @access  Private (admin or teacher owner)
 router.post('/:id/breaks', [
   authenticateToken,
-  requireOwnerOrAdmin('teacher'),
+  requireScheduleAccess(),
   [
     body('startTime')
       .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
@@ -474,7 +475,7 @@ router.post('/:id/breaks', [
 // @access  Private (admin or teacher owner)
 router.delete('/:id/breaks/:breakId', [
   authenticateToken,
-  requireOwnerOrAdmin('teacher')
+  requireScheduleAccess()
 ], async (req, res) => {
   try {
     const { id, breakId } = req.params;
