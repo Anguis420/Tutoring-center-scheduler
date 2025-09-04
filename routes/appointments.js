@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const Appointment = require('../models/Appointment');
 const Schedule = require('../models/Schedule');
 const User = require('../models/User');
+const Student = require('../models/Student');
 const { 
   authenticateToken, 
   requireAdmin, 
@@ -71,17 +72,17 @@ router.post('/', [
     } = req.body;
 
     // Check if student and teacher exist
-    const [studentUser, teacherUser] = await Promise.all([
-      User.findById(student),
+    const [studentDoc, teacherUser] = await Promise.all([
+      Student.findById(student),
       User.findById(teacher)
     ]);
 
-    if (!studentUser || !teacherUser) {
+    if (!studentDoc || !teacherUser) {
       return res.status(404).json({ message: 'Student or teacher not found' });
     }
 
-    if (studentUser.role !== 'parent' || teacherUser.role !== 'teacher') {
-      return res.status(400).json({ message: 'Invalid student or teacher role' });
+    if (teacherUser.role !== 'teacher') {
+      return res.status(400).json({ message: 'Invalid teacher role' });
     }
 
     // Check for scheduling conflicts
@@ -508,23 +509,21 @@ router.post('/book-from-schedule', [
     } = req.body;
 
     // Check if student and teacher exist
-    const [studentUser, teacherUser] = await Promise.all([
-      User.findById(student),
+    const [studentDoc, teacherUser] = await Promise.all([
+      Student.findById(student),
       User.findById(teacher)
     ]);
 
-    if (!studentUser || !teacherUser) {
+    if (!studentDoc || !teacherUser) {
       return res.status(404).json({ message: 'Student or teacher not found' });
     }
 
-    if (studentUser.role !== 'parent' || teacherUser.role !== 'teacher') {
-      return res.status(400).json({ message: 'Invalid student or teacher role' });
+    if (teacherUser.role !== 'teacher') {
+      return res.status(400).json({ message: 'Invalid teacher role' });
     }
 
     // Check if the student belongs to the parent
-    const parentUser = await User.findById(req.user._id);
-    const childExists = parentUser.children.some(child => child._id.toString() === student);
-    if (!childExists) {
+    if (studentDoc.parent.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only book appointments for your own children' });
     }
 
