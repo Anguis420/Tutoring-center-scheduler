@@ -529,16 +529,23 @@ router.post('/book-from-schedule', [
 
     // Check if there's an available schedule for this teacher, day, and time
     const scheduleDate = new Date(scheduledDate);
-    const dayOfWeek = scheduleDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    
+    // Validate date
+    if (isNaN(scheduleDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid scheduled date format' });
+    }
+    
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayOfWeek = dayNames[scheduleDate.getDay()];
     
     const availableSchedule = await Schedule.findOne({
       teacher: teacher,
       dayOfWeek: dayOfWeek,
-      startTime: { $lte: startTime },
-      endTime: { $gte: endTime },
+      startTime: startTime,
+      endTime: endTime,
       isAvailable: true,
       subjects: { $in: [subject] },
-      currentBookings: { $lt: { $expr: { $multiply: ['$maxStudents', 1] } } }
+      $expr: { $lt: ['$currentBookings', '$maxStudents'] }
     });
 
     if (!availableSchedule) {
@@ -595,7 +602,16 @@ router.post('/book-from-schedule', [
 
   } catch (error) {
     console.error('Book appointment from schedule error:', error);
-    res.status(500).json({ message: 'Server error while booking appointment' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      body: req.body,
+      user: req.user?._id
+    });
+    res.status(500).json({ 
+      message: 'Server error while booking appointment',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 });
 
