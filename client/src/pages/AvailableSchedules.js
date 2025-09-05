@@ -79,8 +79,8 @@ const AvailableSchedules = () => {
 
   const fetchTeachers = async () => {
     try {
-      const response = await api.get('/users', { params: { role: 'teacher' } });
-      setTeachers(response.data.users);
+      const response = await api.get('/users/teachers');
+      setTeachers(response.data);
     } catch (error) {
       console.error('Error fetching teachers:', error);
     }
