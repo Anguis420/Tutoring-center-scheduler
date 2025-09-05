@@ -573,6 +573,13 @@ router.post('/book-from-schedule', [
       });
     }
 
+    // Calculate duration in minutes
+    const start = startTime.split(':').map(Number);
+    const end = endTime.split(':').map(Number);
+    const startMinutes = start[0] * 60 + start[1];
+    const endMinutes = end[0] * 60 + end[1];
+    const duration = endMinutes - startMinutes;
+
     // Create appointment
     const appointment = new Appointment({
       student,
@@ -581,6 +588,7 @@ router.post('/book-from-schedule', [
       scheduledDate,
       startTime,
       endTime,
+      duration,
       location: location || 'in-person',
       notes,
       status: 'scheduled'

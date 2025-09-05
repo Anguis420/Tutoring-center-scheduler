@@ -10,6 +10,25 @@ const {
 
 const router = express.Router();
 
+// @route   GET /api/users/teachers
+// @desc    Get all teachers (public for booking)
+// @access  Public
+router.get('/teachers', async (req, res) => {
+  try {
+    const teachers = await User.find({ 
+      role: 'teacher', 
+      isActive: true 
+    })
+    .select('firstName lastName email subjects')
+    .sort({ firstName: 1 });
+
+    res.json(teachers);
+  } catch (error) {
+    console.error('Get teachers error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/users
 // @desc    Get all users (admin only)
 // @access  Private (Admin)
