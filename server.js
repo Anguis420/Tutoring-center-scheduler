@@ -7,6 +7,9 @@ require('dotenv').config();
 
 const app = express();
 
+// Trust proxy for Heroku (fixes rate limiting with X-Forwarded-For headers)
+app.set('trust proxy', 1);
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -46,9 +49,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tutoring-center-scheduler', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 30000, // 30 seconds
+  socketTimeoutMS: 45000, // 45 seconds
+  bufferCommands: false,
+  bufferMaxEntries: 0
 })
 .then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err));
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  // Don't exit the process, let the app continue running
+  // The connection will be retried automatically
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
