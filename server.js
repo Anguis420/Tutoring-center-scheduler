@@ -80,6 +80,23 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Tutoring Center Scheduler API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      schedules: '/api/schedules',
+      appointments: '/api/appointments',
+      students: '/api/students'
+    }
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -89,9 +106,21 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
+// 404 handler - only for unmatched routes
 app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ 
+    message: 'Route not found',
+    availableRoutes: [
+      'GET /',
+      'GET /api/health',
+      'POST /api/auth/login',
+      'POST /api/auth/register',
+      'GET /api/users',
+      'GET /api/schedules',
+      'GET /api/appointments',
+      'GET /api/students'
+    ]
+  });
 });
 
 const PORT = process.env.PORT || 5000;
