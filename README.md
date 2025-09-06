@@ -68,16 +68,22 @@ npm install
 cd ..
 ```
 
+**Note**: The `dotenv` package is already included as a dependency and is required for loading environment variables from the `.env` file.
+
 ### 3. Environment Setup
 ```bash
 # Copy environment variables template
 cp env.example .env
 
 # Edit .env file with your configuration
+# IMPORTANT: Never commit .env files to version control
 # MONGODB_URI=mongodb://localhost:27017/tutoring-center-scheduler
+# For MongoDB Atlas: MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
 # JWT_SECRET=your-secret-key
 # PORT=5000
 ```
+
+**⚠️ Security Note**: The `.env` file contains sensitive information and should never be committed to version control. Make sure `.env` is in your `.gitignore` file.
 
 ### 4. Database Setup
 ```bash
@@ -85,9 +91,14 @@ cp env.example .env
 # On Windows: Start MongoDB service
 # On macOS/Linux: mongod
 
-# Seed demo data
+# Seed demo data (requires .env file with MONGODB_URI)
 npm run seed
+
+# Or seed directly with Atlas connection
+node seed-atlas.js
 ```
+
+**Important**: The seeding scripts (`seed-atlas.js` and `scripts/seed-demo-data.js`) require a `.env` file with the `MONGODB_URI` variable. Make sure to create the `.env` file from `env.example` before running the seeding commands.
 
 ## 🚀 Running the Application
 
@@ -210,15 +221,39 @@ npm start
 
 ### Netlify Deployment
 ```bash
-# 1. Build the application
-npm run netlify-build
+# 1. Build the application (from project root)
+npm --prefix client run build
 
 # 2. Deploy to Netlify
 # - Connect your GitHub repository to Netlify
-# - Build command: npm run netlify-build
-# - Publish directory: client/build
-# - Set environment variables in Netlify dashboard
+# - Set Base directory: client
+# - Build command: npm run build
+# - Publish directory: build
+# - Set environment variables in Netlify dashboard (CLIENT-SAFE ONLY)
 ```
+
+**Important Netlify Configuration:**
+- **Base directory**: `client`
+- **Build command**: `npm run build`
+- **Publish directory**: `build`
+
+**Environment Variables (CLIENT-SAFE ONLY):**
+⚠️ **WARNING**: Only set client-safe environment variables in Netlify:
+- `REACT_APP_*` variables (e.g., `REACT_APP_API_URL`)
+- `VITE_*` variables (if using Vite)
+
+❌ **NEVER set server secrets in Netlify:**
+- `JWT_SECRET`
+- `MONGODB_URI`
+- `NODE_ENV`
+- Any other server-side environment variables
+
+**SPA Redirects Setup:**
+Create `client/public/_redirects` with the following content:
+```
+/* /index.html 200
+```
+This ensures React Router deep links work properly in production.
 
 ### Backend Deployment
 Deploy your backend separately to:
@@ -235,6 +270,17 @@ Deploy your backend separately to:
 - **Security Headers**: Helmet.js for protection
 - **Rate Limiting**: Prevent abuse
 - **CORS Configuration**: Controlled cross-origin access
+- **Environment Variables**: Sensitive data stored in environment variables
+- **No Hardcoded Secrets**: All database credentials and API keys use environment variables
+
+### 🚨 Security Best Practices
+
+1. **Never commit `.env` files** to version control
+2. **Rotate credentials regularly** for production environments
+3. **Use strong, unique passwords** for database users
+4. **Restrict database access** to specific IP addresses when possible
+5. **Monitor access logs** for suspicious activity
+6. **Keep dependencies updated** to patch security vulnerabilities
 
 ## 🧪 Testing
 

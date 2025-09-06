@@ -8,16 +8,25 @@
 [build.environment]
   # Set Node.js version
   NODE_VERSION = "18"
+  # Disable source maps for production builds
+  GENERATE_SOURCEMAP = "false"
 
 # Redirects for SPA routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200
-
 # Headers for security and performance
 [[headers]]
   for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"  for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"

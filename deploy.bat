@@ -21,10 +21,10 @@ echo 4. Set build command: npm run netlify-build
 echo 5. Set publish directory: client/build
 echo 6. Click "Deploy site"
 echo.
-echo 🔧 After deployment, set environment variable:
+echo 🔧 Before building on Netlify, set environment variable:
 echo - Key: REACT_APP_API_URL
-echo - Value: Your backend URL (e.g., https://your-backend.herokuapp.com/api)
-echo.
-echo 📖 See deploy-to-netlify.md for detailed instructions
+echo - Value: Your backend URL (e.g., https://api.example.com)
+echo   Note: CRA embeds REACT_APP_* at build time; changing it requires triggering a new deploy.
+echo.echo 📖 See deploy-to-netlify.md for detailed instructions
 echo.
 pause

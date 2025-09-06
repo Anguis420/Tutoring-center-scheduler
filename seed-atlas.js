@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -5,9 +8,13 @@ const bcrypt = require('bcryptjs');
 const User = require('./models/User');
 const Student = require('./models/Student');
 
-// MongoDB Atlas connection string (replace with your actual password)
-const MONGODB_URI = 'mongodb+srv://dorsatwararnesh:B8TZtheWEC2FZu6D@cluster1.fnau2wu.mongodb.net/tutoring-center-scheduler?retryWrites=true&w=majority&appName=Cluster1';
-
+// MongoDB Atlas connection string from environment variables
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('❌ MONGODB_URI environment variable is required');
+  console.error('Please set MONGODB_URI in your .env file or environment variables');
+  process.exit(1);
+}
 // Demo data
 const demoUsers = [
   {
@@ -149,23 +156,73 @@ const demoStudents = [
 async function seedAtlasDatabase() {
   try {
     console.log('🌐 Connecting to MongoDB Atlas...');
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+    });
+    console.log('✅ Connected to MongoDB Atlas');
     
-    // Connect to MongoDB Atlas
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected to MongoDB Atlas successfully!');
-    console.log('📊 Database:', mongoose.connection.db.databaseName);
-
     // Clear existing data
     console.log('🧹 Clearing existing data...');
+
+    // Add confirmation prompt for safety
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    await new Promise((resolve) => {
+      rl.question('⚠️  This will delete ALL existing users and students. Continue? (yes/no): ', (answer) => {
+        if (answer.toLowerCase() !== 'yes') {
+          console.log('❌ Operation cancelled');
+          rl.close();
+          process.exit(0);
+        }
+        rl.close();
+        resolve();
+      });
+    });
+
     await User.deleteMany({});
     await Student.deleteMany({});
     console.log('✅ Existing data cleared');
+    // Clear existing data
+    console.log('🧹 Clearing existing data...');
+    await User.deleteMany({});
+// Demo students data
+const demoStudents = [
+  {
+    firstName: 'Emma',
+    lastName: 'Smith',
+    parentEmail: 'parent@tutoring.com',
+    dateOfBirth: '2009-05-15',
+    // ... rest of student data
+  },
+  {
+    firstName: 'Lucas',
+    lastName: 'Smith',
+    parentEmail: 'parent@tutoring.com',
+    dateOfBirth: '2011-08-22',
+    // ... rest of student data
+  },
+  {
+    firstName: 'Sophia',
+    lastName: 'Wilson',
+    parentEmail: 'parent2@tutoring.com',
+    dateOfBirth: '2007-03-10',
+    // ... rest of student data
+  }
+];
 
-    // Hash passwords and create users
-    console.log('🔐 Creating demo users...');
-    const hashedUsers = await Promise.all(
-      demoUsers.map(async (user) => {
-        const salt = await bcrypt.genSalt(12);
+// Create students with parent references
+const studentsWithParents = demoStudents.map((student) => {
+  const parent = createdUsers.find(u => u.email === student.parentEmail);
+  const { parentEmail, ...studentData } = student;
+  return { ...studentData, parent: parent._id };
+});        const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(user.password, salt);
         return {
           ...user,

@@ -68,15 +68,29 @@ const AvailableSchedules = () => {
     fetchTeachers();
   }, [fetchSchedules]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       const response = await api.get('/students');
       setStudents(response.data.students);
     } catch (error) {
       console.error('Error fetching students:', error);
     }
-  };
+  }, []);
 
+  const fetchTeachers = useCallback(async () => {
+    try {
+      const response = await api.get('/users/teachers');
+      setTeachers(response.data);
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSchedules();
+    fetchStudents();
+    fetchTeachers();
+  }, [fetchSchedules, fetchStudents, fetchTeachers]);
   const fetchTeachers = async () => {
     try {
       const response = await api.get('/users/teachers');
@@ -88,6 +102,8 @@ const AvailableSchedules = () => {
 
   const generateAvailableDates = (schedule) => {
     const dates = [];
+    // Consider using moment-timezone or ensuring consistent timezone handling
+    // const timezone = 'America/New_York'; // or get from user preferences
     const today = moment();
     const endDate = moment().add(4, 'weeks'); // Show next 4 weeks
     
@@ -105,40 +121,67 @@ const AvailableSchedules = () => {
     }
     
     return dates;
-  };
+  };  const handleBookAppointment = (schedule) => {
+// inside your component, e.g. after other useState declarations
+const [bookingLoading, setBookingLoading] = useState(false);
 
-  const handleBookAppointment = (schedule) => {
-    setSelectedSchedule(schedule);
-    const dates = generateAvailableDates(schedule);
-    setAvailableDates(dates);
-    setBookingFormData({
-      student: '',
-      subject: schedule.subjects[0] || '',
-      scheduledDate: '',
-      startTime: schedule.startTime,
-      endTime: schedule.endTime,
-      notes: ''
-    });
-    setShowBookingModal(true);
-  };
+const handleBookingSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!bookingFormData.student || !bookingFormData.scheduledDate) {
+    toast.error('Please select a student and date');
+    return;
+  }
 
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!bookingFormData.student || !bookingFormData.scheduledDate) {
-      toast.error('Please select a student and date');
-      return;
-    }
+  // Prevent duplicate submissions
+  if (bookingLoading) return;
 
-    try {
-      const appointmentData = {
-        student: bookingFormData.student,
-        teacher: selectedSchedule.teacher._id,
-        subject: bookingFormData.subject,
-        scheduledDate: bookingFormData.scheduledDate,
-        startTime: bookingFormData.startTime,
-        endTime: bookingFormData.endTime,
-        notes: bookingFormData.notes,
+  try {
+    setBookingLoading(true);
+    const appointmentData = {
+      student: bookingFormData.student,
+      teacher: selectedSchedule.teacher._id,
+      subject: bookingFormData.subject,
+      scheduledDate: bookingFormData.scheduledDate,
+      startTime: bookingFormData.startTime,
+      endTime: bookingFormData.endTime,
+      notes: bookingFormData.notes,
+      location: 'in-person'
+    };
+
+    await api.post('/appointments/book-from-schedule', appointmentData);
+    toast.success('Appointment booked successfully!');
+    setShowBookingModal(false);
+    setSelectedSchedule(null);
+    fetchSchedules(); // Refresh schedules to update availability
+  } catch (error) {
+    console.error('Error booking appointment:', error);
+    toast.error(error.response?.data?.message || 'Failed to book appointment');
+  } finally {
+    setBookingLoading(false);
+  }
+};
+
+// …
+
+// In the JSX:
+<button
+  onClick={handleBookingSubmit}
+  className="btn btn-primary"
+  disabled={bookingLoading}
+>
+  {bookingLoading ? (
+    <>
+      <div className="loading-spinner h-4 w-4 mr-2" />
+      Booking...
+    </>
+  ) : (
+    <>
+      <CheckCircle className="h-4 w-4 mr-2" />
+      Book Appointment
+    </>
+  )}
+</button>        notes: bookingFormData.notes,
         location: 'in-person'
       };
 
@@ -318,9 +361,14 @@ const AvailableSchedules = () => {
                       <p className="text-sm text-gray-500">
                         {schedule.teacher?.email}
                       </p>
-                    </div>
-                  </div>
-                  {getAvailabilityStatus(schedule)}
+                      {schedule.subjects?.length > 0
+                        ? schedule.subjects.map((subject, index) => (
+                            <span key={index} className="badge badge-secondary text-xs">
+                              {subject}
+                            </span>
+                          ))
+                        : <span className="text-sm text-gray-500">No subjects specified</span>}
+                    </div>                  {getAvailabilityStatus(schedule)}
                 </div>
 
                 <div className="space-y-3">
@@ -462,14 +510,21 @@ const AvailableSchedules = () => {
                     className="input w-full"
                     required
                   >
-                    {selectedSchedule.subjects?.map(subject => (
-                      <option key={subject} value={subject}>
-                        {subject}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
+<select
+  value={bookingFormData.subject}
+  onChange={(e) => setBookingFormData(prev => ({ ...prev, subject: e.target.value }))}
+  className="input w-full"
+  required
+>
+  {!selectedSchedule.subjects?.length && (
+    <option value="">No subjects available</option>
+  )}
+  {selectedSchedule.subjects?.map(subject => (
+    <option key={subject} value={subject}>
+      {subject}
+    </option>
+  ))}
+</select>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Date *

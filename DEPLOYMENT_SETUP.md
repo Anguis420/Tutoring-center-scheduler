@@ -22,10 +22,8 @@ git remote add heroku https://git.heroku.com/your-app-name.git
 
 # Set environment variables in Heroku
 heroku config:set MONGODB_URI="your-mongodb-atlas-connection-string"
-heroku config:set JWT_SECRET="your-super-secret-jwt-key"
-heroku config:set NODE_ENV="production"
-```
-
+heroku config:set JWT_SECRET="$(openssl rand -hex 32)"
+# NODE_ENV is set by Heroku for Node.js apps; no need to set explicitly.
 ### 2. **Netlify Setup**
 1. Go to [Netlify](https://app.netlify.com)
 2. Click "New site from Git"
@@ -40,11 +38,9 @@ heroku config:set NODE_ENV="production"
 1. Go to [MongoDB Atlas](https://www.mongodb.com/atlas)
 2. Create a new cluster
 3. Create a database user
-4. Whitelist your IP addresses (or use 0.0.0.0/0 for all IPs)
+4. Configure Atlas IP Access List with only the IPs/CIDRs that need access (avoid 0.0.0.0/0).
 5. Get your connection string
-6. Update the connection string in your Heroku environment variables
-
-## 🚀 Using the Deployment Scripts
+6. Update the connection string in your Heroku environment variables## 🚀 Using the Deployment Scripts
 
 ### **Windows Users**
 ```bash
@@ -76,13 +72,7 @@ If you prefer to deploy manually:
 ```bash
 git add .
 git commit -m "Your update message"
-git push heroku main
-```
-
-### **Frontend to Netlify**
-```bash
-cd client
-npm run build
+### **Backend to Heroku**npm run build
 cd ..
 npm run netlify-build
 # Then push to your connected Git repository
@@ -90,10 +80,8 @@ git push origin main
 ```
 
 ### **Database Updates**
-- Schema changes are applied automatically when Heroku restarts
-- For data migrations, run scripts through your Heroku app or directly in Atlas
-
-## 🐛 Troubleshooting
+- Use explicit, versioned migration scripts (e.g., migrate-mongo), and run them during deploy or via a one-off dyno.
+- Manage indexes with code or migrations; verify with Atlas.## 🐛 Troubleshooting
 
 ### **Heroku Issues**
 ```bash
@@ -123,13 +111,8 @@ heroku restart
 ```
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
 JWT_SECRET=your-super-secret-jwt-key
-NODE_ENV=production
-PORT=5000
-```
-
-### **Netlify (Frontend)**
-```
-REACT_APP_API_URL=https://your-heroku-app-name.herokuapp.com/api
+NODE_ENV=production  # optional; Heroku sets this for Node apps
+# Do NOT set PORT on Heroku; your app must listen on the port provided by $PORTREACT_APP_API_URL=https://your-heroku-app-name.herokuapp.com/api
 NODE_ENV=production
 ```
 

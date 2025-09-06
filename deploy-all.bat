@@ -58,20 +58,41 @@ echo.
 echo 🏗️ Step 3: Building Frontend
 echo ============================
 echo Building React application...
+echo Building React application...
+cd client
 call npm run build
 if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Frontend build failed
+    cd ..
+    pause
+    exit /b 1
+)
+cd ..
+echo ✅ Frontend build successful!if %ERRORLEVEL% NEQ 0 (
     echo ❌ Frontend build failed
     pause
     exit /b 1
 )
-echo ✅ Frontend build successful!
+REM Check if there are changes to commit
+git diff --cached --quiet
+if %ERRORLEVEL% EQU 0 (
+    git diff --quiet
+    if %ERRORLEVEL% EQU 0 (
+        echo ℹ️  No changes to commit, skipping commit step
+        goto DEPLOY_HEROKU
+    )
+)
 
-echo.
-echo 📝 Step 4: Committing Changes
-echo =============================
-echo Please enter a commit message for your deployment:
-set /p COMMIT_MSG="Commit message: "
-if "!COMMIT_MSG!"=="" set COMMIT_MSG=Deploy updates to all services
+git add .
+git commit -m "!COMMIT_MSG!"
+if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Git commit failed
+    pause
+    exit /b 1
+)
+echo ✅ Changes committed successfully!
+
+:DEPLOY_HEROKUif "!COMMIT_MSG!"=="" set COMMIT_MSG=Deploy updates to all services
 
 git add .
 git commit -m "!COMMIT_MSG!"

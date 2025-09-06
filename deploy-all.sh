@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -6,7 +7,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
-
 echo -e "${BLUE}🚀 COMPREHENSIVE DEPLOYMENT SCRIPT${NC}"
 echo "==================================="
 echo "This script will deploy to:"
@@ -29,12 +29,20 @@ fi
 
 echo -e "${YELLOW}📋 Step 1: Checking Git Status${NC}"
 echo "=============================="
-git status --porcelain
-if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Git status check failed${NC}"
-    exit 1
+echo -e "${YELLOW}📋 Step 1: Checking Git Status${NC}"
+echo "=============================="
+if [ -n "$(git status --porcelain)" ]; then
+    echo -e "${YELLOW}⚠️  Uncommitted changes detected:${NC}"
+    git status --short
+    echo
+    read -p "Continue with uncommitted changes? (y/N): " CONTINUE
+    if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+        echo -e "${RED}❌ Deployment cancelled${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ Working directory clean${NC}"
 fi
-
 echo
 echo -e "${YELLOW}📦 Step 2: Installing Dependencies${NC}"
 echo "=================================="
@@ -58,7 +66,19 @@ echo
 echo -e "${YELLOW}🏗️ Step 3: Building Frontend${NC}"
 echo "============================"
 echo "Building React application..."
-npm run build
+
+# Check if build script exists in root package.json
+if [ -f "package.json" ] && grep -q '"build"' package.json; then
+    echo "Found build script in root package.json, running from root..."
+    npm run build
+elif [ -f "client/package.json" ] && grep -q '"build"' client/package.json; then
+    echo "Found build script in client/package.json, running from client directory..."
+    cd client && npm run build && cd ..
+else
+    echo -e "${RED}❌ No build script found in package.json or client/package.json${NC}"
+    exit 1
+fi
+
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Frontend build failed${NC}"
     exit 1
@@ -74,8 +94,11 @@ if [ -z "$COMMIT_MSG" ]; then
     COMMIT_MSG="Deploy updates to all services"
 fi
 
-git add .
-git commit -m "$COMMIT_MSG"
+echo "Deploying backend to Heroku..."
+# Detect the current branch
+CURRENT_BRANCH=$(git branch --show-current)
+echo "Pushing branch: $CURRENT_BRANCH"
+git push heroku "$CURRENT_BRANCH:main"git commit -m "$COMMIT_MSG"
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Git commit failed${NC}"
     exit 1
@@ -100,9 +123,13 @@ echo -e "${GREEN}✅ Heroku deployment successful!${NC}"
 echo
 echo -e "${YELLOW}🌐 Step 6: Deploying to Netlify${NC}"
 echo "==============================="
-echo "Deploying frontend to Netlify..."
-npm run netlify-build
-if [ $? -ne 0 ]; then
+# Load deployment URLs from environment or use placeholders
+HEROKU_APP_URL="${HEROKU_APP_URL:-https://your-app-name.herokuapp.com}"
+NETLIFY_SITE_URL="${NETLIFY_SITE_URL:-https://your-site-name.netlify.app}"
+
+echo -e "${YELLOW}🔧 Next Steps:${NC}"
+echo "1. Verify your Heroku app is running: $HEROKU_APP_URL"
+echo "2. Check your Netlify site: $NETLIFY_SITE_URL"if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Netlify build failed${NC}"
     exit 1
 fi

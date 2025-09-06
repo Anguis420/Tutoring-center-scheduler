@@ -111,25 +111,31 @@ const requireScheduleAccess = () => {
         return next();
       }
 
-      const scheduleId = req.params.id;
+      const scheduleId = req.params.id || req.params.scheduleId || req.body.scheduleId;
       if (!scheduleId) {
         return res.status(400).json({ message: 'Schedule ID required' });
+      }
+      // Validate ObjectId format (prevents CastError -> 500)
+      if (!/^[0-9a-fA-F]{24}$/.test(String(scheduleId))) {
+        return res.status(400).json({ message: 'Invalid schedule ID' });
       }
 
       // Import here to avoid circular dependency
       const Schedule = require('../models/Schedule');
       const schedule = await Schedule.findById(scheduleId);
 
-      if (!schedule) {
-        return res.status(404).json({ message: 'Schedule not found' });
-      }
-
       // Check if user is the teacher who owns this schedule
       if (req.user.role === 'teacher') {
-        if (req.user._id.toString() !== schedule.teacher.toString()) {
+        if (!schedule.teacher) {
+          return res.status(400).json({ message: 'Schedule has no assigned teacher' });
+        }
+        const teacherId = String(schedule.teacher._id || schedule.teacher);
+        if (String(req.user._id) !== teacherId) {
           return res.status(403).json({ message: 'Access denied. You can only manage your own schedules.' });
         }
       } else {
+        return res.status(403).json({ message: 'Access denied. Only teachers and admins can manage schedules.' });
+      }      } else {
         return res.status(403).json({ message: 'Access denied. Only teachers and admins can manage schedules.' });
       }
 

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
+<html lang="en" class="no-js">  <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -200,7 +199,6 @@
       });
       
       // Fallback for older browsers
-      document.documentElement.classList.add('no-js');
-    </script>
-  </body>
+      document.documentElement.classList.remove('no-js');
+    </script>  </body>
 </html>

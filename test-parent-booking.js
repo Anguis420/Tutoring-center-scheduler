@@ -7,10 +7,9 @@ async function testParentBooking() {
     // First, login as a parent
     console.log('\n1. Logging in as parent...');
     const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
-      email: 'parent@tutoring.com', // Assuming this parent exists
-      password: 'parent123'
-    });
-    
+      email: process.env.TEST_PARENT_EMAIL || 'parent@tutoring.com',
+      password: process.env.TEST_PARENT_PASSWORD || 'parent123'
+    });    
     const token = loginResponse.data.token;
     const parentId = loginResponse.data.user._id;
     

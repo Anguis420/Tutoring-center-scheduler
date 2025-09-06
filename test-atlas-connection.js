@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const mongoose = require('mongoose');
 
 // Test connection to MongoDB Atlas
@@ -5,12 +8,25 @@ async function testConnection() {
   try {
     console.log('🔍 Testing MongoDB Atlas connection...');
     
-    // Try to connect
-    await mongoose.connect('mongodb+srv://dorsatwararnesh:B8TZtheWEC2FZu6D@cluster1.fnau2wu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1');
-    
-    console.log('✅ Connection successful!');
-    console.log('📊 Database:', mongoose.connection.db.databaseName);
-    console.log('🔌 Connection state:', mongoose.connection.readyState);
+    // Get MongoDB URI from environment variables
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      throw new Error('MONGODB_URI environment variable is required. Please set it in your .env file or environment.');
+    }
+    try {
+      const adminDb = mongoose.connection.db.admin();
+      const dbList = await adminDb.listDatabases();
+      console.log('\n📚 Available databases:');
+      for (const db of dbList.databases) {
+        console.log(`  - ${db.name} (${db.sizeOnDisk} bytes)`);
+      }
+    } catch (authErr) {
+      if (authErr?.code === 13 || /not authorized/i.test(authErr.message)) {
+        console.log('\nℹ️ Connected, but user lacks listDatabases privilege. Skipping database list.');
+      } else {
+        console.warn('\n⚠️ Failed to list databases:', authErr.message);
+      }
+    }    console.log('🔌 Connection state:', mongoose.connection.readyState);
     
     // List databases
     const adminDb = mongoose.connection.db.admin();
@@ -22,6 +38,7 @@ async function testConnection() {
     
   } catch (error) {
     console.error('❌ Connection failed:', error.message);
+    process.exitCode = 1;
     
     if (error.message.includes('bad auth')) {
       console.log('\n🔑 Authentication failed. Possible issues:');
@@ -38,10 +55,9 @@ async function testConnection() {
     }
   } finally {
     if (mongoose.connection.readyState === 1) {
-      await mongoose.connection.close();
+      await mongoose.disconnect();
       console.log('\n🔌 Connection closed');
     }
-    process.exit(0);
   }
 }
 

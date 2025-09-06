@@ -133,8 +133,31 @@ router.get('/daily/:date', [
   requireTeacher
 ], async (req, res) => {
   try {
+router.get('/schedules/:date', [/* …middleware… */], async (req, res) => {
     const { date } = req.params;
+    // Parse date in YYYY-MM-DD format to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    const scheduleDate = new Date(year, month - 1, day);
+    
+    // Use UTC methods or a library like date-fns for consistent day calculation
+    const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayOfWeek = daysOfWeek[scheduleDate.getDay()];    
+    // Validate date format (expecting YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+    
     const scheduleDate = new Date(date);
+    
+    // Check if date is valid
+    if (isNaN(scheduleDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid date' });
+    }
+    
+    const dayOfWeek = scheduleDate
+      .toLocaleDateString('en-US', { weekday: 'long' })
+      .toLowerCase();
+    // …rest of handler…    const scheduleDate = new Date(date);
     const dayOfWeek = scheduleDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
     // Get teacher's schedules for this day
@@ -150,8 +173,9 @@ router.get('/daily/:date', [
     const endOfDay = new Date(scheduleDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const appointments = await Appointment.find({
-      teacher: req.user._id,
+const Schedule = require('../models/Schedule');
+const User     = require('../models/User');
+const Appointment = require('../models/Appointment');      teacher: req.user._id,
       scheduledDate: {
         $gte: startOfDay,
         $lte: endOfDay

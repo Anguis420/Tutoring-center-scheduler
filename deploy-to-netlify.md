@@ -19,7 +19,15 @@ Your Tutoring Center Scheduler has been successfully built and is ready for Netl
 ### Step 3: Configure Build Settings
 - **Build command**: `npm run netlify-build`
 - **Publish directory**: `client/build`
-- **Node version**: `18` (will be set automatically)
+- **Node version**: `18` (pinned via netlify.toml)
+
+**Note**: Node.js version is pinned to 18 in the `netlify.toml` file. The project uses `netlify.toml` to specify the Node version rather than relying on automatic detection. See the configuration below:
+
+```toml
+[build.environment]
+  # Set Node.js version
+  NODE_VERSION = "18"
+```
 
 ### Step 4: Deploy
 1. Click **"Deploy site"**
@@ -73,15 +81,13 @@ git push heroku main
 - ⚠️ **Required**: Set `REACT_APP_API_URL` environment variable
 
 ### Build Fails
-- Check Node.js version (should be 18+)
-- Verify all dependencies are committed
-- Check Netlify build logs
-
-### Routing Issues
-- ✅ **Fixed**: `_redirects` file configured
-- ✅ **Fixed**: `netlify.toml` configured
-
 ## 📁 Files Ready for Deployment
+
+- ✅ `client/public/index.html` - Main HTML file
+- ✅ `client/public/_redirects` - SPA routing
+- ✅ `netlify.toml` - Netlify configuration
+- ✅ `client/build/` - Generated at build time (do not commit to Git)
+- ✅ All source files with ESLint issues fixed## 📁 Files Ready for Deployment
 
 - ✅ `client/public/index.html` - Main HTML file
 - ✅ `client/public/_redirects` - SPA routing

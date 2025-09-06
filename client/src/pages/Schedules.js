@@ -43,10 +43,14 @@ const Schedules = () => {
   const [editFormData, setEditFormData] = useState({});
   const [users, setUsers] = useState([]);
   const [newSubject, setNewSubject] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
+  });
   const [dailySchedules, setDailySchedules] = useState([]);
   const [viewMode, setViewMode] = useState('weekly'); // 'weekly' or 'daily'
-
+  
   useEffect(() => {
     if (user?.role === 'teacher' && viewMode === 'daily') {
       fetchDailySchedules(selectedDate);
@@ -80,7 +84,7 @@ const Schedules = () => {
     }
   };
 
-  const fetchDailySchedules = async (date) => {
+  const fetchDailySchedules = async (date = selectedDate) => {
     try {
       setLoading(true);
       const response = await api.get(`/schedules/daily/${date}`);
@@ -102,6 +106,15 @@ const Schedules = () => {
     }
   };
 
+  // Unified refresh helper that respects the current view mode
+  const refreshSchedules = () => {
+    if (user?.role === 'teacher' && viewMode === 'daily') {
+      fetchDailySchedules(selectedDate);
+    } else {
+      fetchSchedules();
+    }
+  };
+
   const handleDeleteSchedule = async (scheduleId) => {
     if (!window.confirm('Are you sure you want to delete this schedule?')) {
       return;
@@ -110,7 +123,7 @@ const Schedules = () => {
     try {
       await api.delete(`/schedules/${scheduleId}`);
       toast.success('Schedule deleted successfully');
-      fetchSchedules();
+      refreshSchedules();
     } catch (error) {
       console.error('Error deleting schedule:', error);
       toast.error('Failed to delete schedule');
@@ -160,7 +173,7 @@ const Schedules = () => {
         maxStudents: 5,
         isAvailable: true
       });
-      fetchSchedules();
+      refreshSchedules();
     } catch (error) {
       console.error('Error creating schedule:', error);
       if (error.response?.data?.errors) {
@@ -179,7 +192,7 @@ const Schedules = () => {
       toast.success('Schedule updated successfully');
       setShowEditModal(false);
       setSelectedSchedule(null);
-      fetchSchedules();
+      refreshSchedules();
     } catch (error) {
       console.error('Error updating schedule:', error);
       toast.error('Failed to update schedule');
@@ -393,7 +406,7 @@ const Schedules = () => {
 
             {/* Refresh Button */}
             <button
-              onClick={fetchSchedules}
+              onClick={refreshSchedules}
               className="btn btn-secondary"
             >
               <RefreshCw className="h-4 w-4 mr-2" />

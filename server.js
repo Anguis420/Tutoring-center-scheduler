@@ -46,22 +46,39 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Database connection
+let connectionAttempts = 0;
+const MAX_RETRY_ATTEMPTS = 10;
+
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tutoring-center-scheduler', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 30000, // 30 seconds
-      socketTimeoutMS: 45000, // 45 seconds
-    });
+    connectionAttempts++;
+    await mongoose.connect(
+      process.env.MONGODB_URI ||
+        'mongodb://localhost:27017/tutoring-center-scheduler',
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 30000, // 30 seconds
+        socketTimeoutMS: 45000,           // 45 seconds
+      }
+    );
     console.log('MongoDB connected successfully');
+    connectionAttempts = 0; // Reset on successful connection
   } catch (err) {
     console.error('MongoDB connection error:', err);
+    if (connectionAttempts >= MAX_RETRY_ATTEMPTS) {
+      console.error(
+        `Failed to connect after ${MAX_RETRY_ATTEMPTS} attempts. Exiting...`
+      );
+      process.exit(1);
+    }
+    console.log(
+      `Retrying connection (attempt ${connectionAttempts}/${MAX_RETRY_ATTEMPTS})...`
+    );
     // Retry connection after 5 seconds
     setTimeout(connectDB, 5000);
   }
 };
-
 connectDB();
 
 // Routes

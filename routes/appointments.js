@@ -1,9 +1,11 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { body, validationResult } = require('express-validator');
 const Appointment = require('../models/Appointment');
 const Schedule = require('../models/Schedule');
 const User = require('../models/User');
 const Student = require('../models/Student');
+const { logError, createSafeErrorResponse } = require('../utils/errorLogger');
 const { 
   authenticateToken, 
   requireAdmin, 
@@ -73,7 +75,7 @@ router.post('/', [
 
     // Check if student and teacher exist
     const [studentDoc, teacherUser] = await Promise.all([
-      Student.findById(student),
+      Student.findById(student).populate('parent'),
       User.findById(teacher)
     ]);
 
@@ -83,6 +85,11 @@ router.post('/', [
 
     if (teacherUser.role !== 'teacher') {
       return res.status(400).json({ message: 'Invalid teacher role' });
+    }
+
+    // Validate that the student's parent has the correct role
+    if (!studentDoc.parent || studentDoc.parent.role !== 'parent') {
+      return res.status(400).json({ message: 'Invalid student relationship - student must be associated with a parent user' });
     }
 
     // Check for scheduling conflicts
@@ -111,8 +118,28 @@ router.post('/', [
       notes
     });
 
-    await appointment.save();
+    // Use a transaction to ensure atomicity
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    try {
+   // Persist the new appointment within the transaction
+   await appointment.save({ session });
 
+   // Update schedule booking count within the same transaction
+   availableSchedule.currentBookings += 1;
+   await availableSchedule.save({ session });
+
+   // Commit only if both operations succeed
+   await session.commitTransaction();
+ } catch (error) {
+   // Roll back on any failure
+   await session.abortTransaction();
+   throw error;
+ } finally {
+   // Clean up the session
+   session.endSession();
+ }
     // Populate student and teacher details
     await appointment.populate('student teacher');
 
@@ -122,8 +149,8 @@ router.post('/', [
     });
 
   } catch (error) {
-    console.error('Create appointment error:', error);
-    res.status(500).json({ message: 'Server error while creating appointment' });
+    logError('Create appointment error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while creating appointment'));
   }
 });
 
@@ -190,8 +217,8 @@ router.get('/', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get appointments error:', error);
-    res.status(500).json({ message: 'Server error while fetching appointments' });
+    logError('Get appointments error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while fetching appointments'));
   }
 });
 
@@ -202,8 +229,8 @@ router.get('/:id', authenticateToken, requireAppointmentAccess(), async (req, re
   try {
     res.json({ appointment: req.appointment });
   } catch (error) {
-    console.error('Get appointment error:', error);
-    res.status(500).json({ message: 'Server error while fetching appointment' });
+    logError('Get appointment error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while fetching appointment'));
   }
 });
 
@@ -283,8 +310,8 @@ router.put('/:id', [
     });
 
   } catch (error) {
-    console.error('Update appointment error:', error);
-    res.status(500).json({ message: 'Server error while updating appointment' });
+    logError('Update appointment error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while updating appointment'));
   }
 });
 
@@ -382,8 +409,8 @@ router.post('/:id/reschedule', [
     });
 
   } catch (error) {
-    console.error('Reschedule appointment error:', error);
-    res.status(500).json({ message: 'Server error while rescheduling appointment' });
+    logError('Reschedule appointment error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while rescheduling appointment'));
   }
 });
 
@@ -418,8 +445,8 @@ router.delete('/:id', [
     });
 
   } catch (error) {
-    console.error('Cancel appointment error:', error);
-    res.status(500).json({ message: 'Server error while cancelling appointment' });
+    logError('Cancel appointment error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while cancelling appointment'));
   }
 });
 
@@ -441,8 +468,8 @@ router.get('/upcoming/:userId', authenticateToken, async (req, res) => {
     res.json({ appointments });
 
   } catch (error) {
-    console.error('Get upcoming appointments error:', error);
-    res.status(500).json({ message: 'Server error while fetching upcoming appointments' });
+    logError('Get upcoming appointments error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while fetching upcoming appointments'));
   }
 });
 
@@ -510,7 +537,7 @@ router.post('/book-from-schedule', [
 
     // Check if student and teacher exist
     const [studentDoc, teacherUser] = await Promise.all([
-      Student.findById(student),
+      Student.findById(student).populate('parent'),
       User.findById(teacher)
     ]);
 
@@ -520,6 +547,11 @@ router.post('/book-from-schedule', [
 
     if (teacherUser.role !== 'teacher') {
       return res.status(400).json({ message: 'Invalid teacher role' });
+    }
+
+    // Validate that the student's parent has the correct role
+    if (!studentDoc.parent || studentDoc.parent.role !== 'parent') {
+      return res.status(400).json({ message: 'Invalid student relationship - student must be associated with a parent user' });
     }
 
     // Check if the student belongs to the parent
@@ -580,6 +612,9 @@ router.post('/book-from-schedule', [
     const endMinutes = end[0] * 60 + end[1];
     const duration = endMinutes - startMinutes;
 
+    if (duration <= 0) {
+      return res.status(400).json({ message: 'End time must be after start time' });
+    }
     // Create appointment
     const appointment = new Appointment({
       student,
@@ -609,17 +644,8 @@ router.post('/book-from-schedule', [
     });
 
   } catch (error) {
-    console.error('Book appointment from schedule error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      body: req.body,
-      user: req.user?._id
-    });
-    res.status(500).json({ 
-      message: 'Server error while booking appointment',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    logError('Book appointment from schedule error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while booking appointment'));
   }
 });
 
@@ -654,8 +680,8 @@ router.get('/conflicts', [
     });
 
   } catch (error) {
-    console.error('Check conflicts error:', error);
-    res.status(500).json({ message: 'Server error while checking conflicts' });
+    logError('Check conflicts error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while checking conflicts'));
   }
 });
 
