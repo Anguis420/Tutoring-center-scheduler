@@ -198,6 +198,8 @@ const Appointments = () => {
     }
   };
 
+  // Note: handleUpdateStatus function is available for future use
+  // Currently not used in the UI but kept for potential status management features
   const handleUpdateStatus = async (appointmentId, newStatus) => {
     try {
       await api.put(`/appointments/${appointmentId}/status`, { status: newStatus });

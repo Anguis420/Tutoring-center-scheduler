@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -35,9 +35,9 @@ const Dashboard = () => {
     if (user?.role === 'parent') {
       fetchStudents();
     }
-  }, [user, selectedStudent]);
+  }, [user, selectedStudent, fetchDashboardData, fetchStudents]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -85,9 +85,9 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, selectedStudent, recentAppointments]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       const response = await api.get('/students');
       const fetchedStudents = response.data.students;
@@ -100,7 +100,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching students:', error);
     }
-  };
+  }, [selectedStudent]);
 
   // Quick Action Handlers
   const handleQuickAction = (action) => {
