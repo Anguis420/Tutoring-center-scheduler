@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../contexts/AuthContext';
 import { 
@@ -46,14 +46,7 @@ const Students = () => {
   const [newSubject, setNewSubject] = useState('');
   const [parents, setParents] = useState([]);
 
-  useEffect(() => {
-    fetchStudents();
-    if (user?.role === 'admin') {
-      fetchParents();
-    }
-  }, [user]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/students');
@@ -64,17 +57,25 @@ const Students = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchParents = async () => {
+  const fetchParents = useCallback(async () => {
     try {
       const response = await api.get('/users');
       const parentUsers = response.data.users.filter(u => u.role === 'parent' && u.isActive);
       setParents(parentUsers);
     } catch (error) {
       console.error('Error fetching parents:', error);
+      toast.error('Failed to fetch parents');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchStudents();
+    if (user?.role === 'admin') {
+      fetchParents();
+    }
+  }, [user, fetchStudents, fetchParents]);
 
   const handleCreateStudent = async (e) => {
     e.preventDefault();
