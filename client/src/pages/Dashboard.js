@@ -30,13 +30,6 @@ const Dashboard = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showStudentSelector, setShowStudentSelector] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-    if (user?.role === 'parent') {
-      fetchStudents();
-    }
-  }, [user, selectedStudent, fetchDashboardData, fetchStudents]);
-
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -101,6 +94,13 @@ const Dashboard = () => {
       console.error('Error fetching students:', error);
     }
   }, [selectedStudent]);
+
+  useEffect(() => {
+    fetchDashboardData();
+    if (user?.role === 'parent') {
+      fetchStudents();
+    }
+  }, [user, selectedStudent, fetchDashboardData, fetchStudents]);
 
   // Quick Action Handlers
   const handleQuickAction = (action) => {
