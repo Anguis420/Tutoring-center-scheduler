@@ -13,6 +13,11 @@ async function testConnection() {
     if (!mongoUri) {
       throw new Error('MONGODB_URI environment variable is required. Please set it in your .env file or environment.');
     }
+    // Connect to MongoDB
+    console.log('🔗 Connecting to MongoDB...');
+    await mongoose.connect(mongoUri);
+    console.log('✅ Successfully connected to MongoDB Atlas!');
+    
     try {
       const adminDb = mongoose.connection.db.admin();
       const dbList = await adminDb.listDatabases();
@@ -26,17 +31,9 @@ async function testConnection() {
       } else {
         console.warn('\n⚠️ Failed to list databases:', authErr.message);
       }
-    }    console.log('🔌 Connection state:', mongoose.connection.readyState);
+    }
     
-    // List databases
-    const adminDb = mongoose.connection.db.admin();
-    const dbList = await adminDb.listDatabases();
-    console.log('\n📚 Available databases:');
-    dbList.databases.forEach(db => {
-      console.log(`  - ${db.name} (${db.sizeOnDisk} bytes)`);
-    });
-    
-  } catch (error) {
+    console.log('\n🔌 Connection state:', mongoose.connection.readyState);  } catch (error) {
     console.error('❌ Connection failed:', error.message);
     process.exitCode = 1;
     

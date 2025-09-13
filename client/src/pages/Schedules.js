@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import { 
   Clock, 
   Search, 
@@ -44,11 +45,12 @@ const Schedules = () => {
   const [users, setUsers] = useState([]);
   const [newSubject, setNewSubject] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 10);
-  });
-  const [dailySchedules, setDailySchedules] = useState([]);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });  const [dailySchedules, setDailySchedules] = useState([]);
   const [viewMode, setViewMode] = useState('weekly'); // 'weekly' or 'daily'
   
   useEffect(() => {
@@ -83,9 +85,13 @@ const Schedules = () => {
       setLoading(false);
     }
   };
-
   const fetchDailySchedules = async (date = selectedDate) => {
     try {
+      // Validate date format (YYYY-MM-DD)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        toast.error('Invalid date format');
+        return;
+      }
       setLoading(true);
       const response = await api.get(`/schedules/daily/${date}`);
       setDailySchedules(response.data.schedules);
@@ -315,15 +321,14 @@ const Schedules = () => {
           </button>
         )}
         {user?.role === 'parent' && (
-          <a
-            href="/available-schedules"
+          <Link
+            to="/available-schedules"
             className="btn btn-primary"
           >
             <BookOpen className="h-4 w-4 mr-2" />
             Book Appointments
-          </a>
-        )}
-        {user?.role === 'teacher' && (
+          </Link>
+        )}        {user?.role === 'teacher' && (
           <div className="flex space-x-2">
             <button
               onClick={() => setViewMode('weekly')}
@@ -590,15 +595,14 @@ const Schedules = () => {
                             <Eye className="h-4 w-4" />
                           </button>
                           {user?.role === 'parent' ? (
-                            <a
-                              href="/available-schedules"
+                            <Link
+                              to="/available-schedules"
                               className="btn btn-sm btn-primary"
                               title="Book Appointment"
                             >
                               <BookOpen className="h-4 w-4" />
-                            </a>
-                          ) : canManageSchedule(schedule) && (
-                            <>
+                            </Link>
+                          ) : canManageSchedule(schedule) && (                            <>
                               <button
                                 onClick={() => handleEditSchedule(schedule)}
                                 className="btn btn-sm btn-primary"
@@ -1071,4 +1075,4 @@ const Schedules = () => {
   );
 };
 
-export default Schedules; 
+export default Schedules;

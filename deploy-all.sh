@@ -29,8 +29,6 @@ fi
 
 echo -e "${YELLOW}📋 Step 1: Checking Git Status${NC}"
 echo "=============================="
-echo -e "${YELLOW}📋 Step 1: Checking Git Status${NC}"
-echo "=============================="
 if [ -n "$(git status --porcelain)" ]; then
     echo -e "${YELLOW}⚠️  Uncommitted changes detected:${NC}"
     git status --short
@@ -50,12 +48,13 @@ echo "Installing backend dependencies..."
 npm install
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Backend dependency installation failed${NC}"
+if ! npm install; then
+    echo -e "${RED}❌ Backend dependency installation failed${NC}"
     exit 1
 fi
 
 echo "Installing frontend dependencies..."
-cd client
-npm install
+cd clientnpm install
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Frontend dependency installation failed${NC}"
     exit 1
@@ -70,46 +69,54 @@ echo "Building React application..."
 # Check if build script exists in root package.json
 if [ -f "package.json" ] && grep -q '"build"' package.json; then
     echo "Found build script in root package.json, running from root..."
+    set +e
     npm run build
+    BUILD_EXIT_CODE=$?
+    set -e
 elif [ -f "client/package.json" ] && grep -q '"build"' client/package.json; then
     echo "Found build script in client/package.json, running from client directory..."
-    cd client && npm run build && cd ..
+    set +e
+    cd client && npm run build
+    BUILD_EXIT_CODE=$?
+    cd ..
+    set -e
 else
     echo -e "${RED}❌ No build script found in package.json or client/package.json${NC}"
     exit 1
 fi
 
-if [ $? -ne 0 ]; then
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
     echo -e "${RED}❌ Frontend build failed${NC}"
     exit 1
 fi
+
 echo -e "${GREEN}✅ Frontend build successful!${NC}"
 
 echo
 echo -e "${YELLOW}📝 Step 4: Committing Changes${NC}"
 echo "============================="
-echo "Please enter a commit message for your deployment:"
-read -p "Commit message: " COMMIT_MSG
-if [ -z "$COMMIT_MSG" ]; then
-    COMMIT_MSG="Deploy updates to all services"
+
+# Check if there are changes to commit
+if [ -z "$(git status --porcelain)" ]; then
+    echo -e "${YELLOW}ℹ️  No changes to commit, proceeding with current commits${NC}"
+else
+    git add .
+    echo "Please enter a commit message for your deployment:"
+    read -p "Commit message: " COMMIT_MSG
+    if [ -z "$COMMIT_MSG" ]; then
+        COMMIT_MSG="Deploy updates to all services"
+    fi
+    git commit -m "$COMMIT_MSG"
+    echo -e "${GREEN}✅ Changes committed successfully!${NC}"
 fi
 
+echo
+echo -e "${YELLOW}🚀 Step 5: Deploying to Heroku${NC}"echo "=============================="
 echo "Deploying backend to Heroku..."
 # Detect the current branch
 CURRENT_BRANCH=$(git branch --show-current)
 echo "Pushing branch: $CURRENT_BRANCH"
-git push heroku "$CURRENT_BRANCH:main"git commit -m "$COMMIT_MSG"
-if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Git commit failed${NC}"
-    exit 1
-fi
-echo -e "${GREEN}✅ Changes committed successfully!${NC}"
-
-echo
-echo -e "${YELLOW}🚀 Step 5: Deploying to Heroku${NC}"
-echo "=============================="
-echo "Deploying backend to Heroku..."
-git push heroku main
+git push heroku "$CURRENT_BRANCH:main"
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Heroku deployment failed${NC}"
     echo -e "${YELLOW}💡 Make sure you have:${NC}"
@@ -123,16 +130,62 @@ echo -e "${GREEN}✅ Heroku deployment successful!${NC}"
 echo
 echo -e "${YELLOW}🌐 Step 6: Deploying to Netlify${NC}"
 echo "==============================="
+
+# Check if Netlify CLI is installed
+if ! command -v netlify &> /dev/null; then
+    echo -e "${RED}❌ Netlify CLI is not installed${NC}"
+    echo -e "${YELLOW}💡 To install Netlify CLI, run:${NC}"
+    echo "   npm install -g netlify-cli"
+    echo "   or visit: https://docs.netlify.com/cli/get-started/"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Netlify CLI found${NC}"
+
+# Change to frontend directory
+echo "Changing to frontend directory..."
+cd client
+
+# Check for build directory
+BUILD_DIR=""
+if [ -d "build" ]; then
+    BUILD_DIR="build"
+    echo -e "${GREEN}✅ Found build directory${NC}"
+elif [ -d "dist" ]; then
+    BUILD_DIR="dist"
+    echo -e "${GREEN}✅ Found dist directory${NC}"
+else
+    echo -e "${RED}❌ No build directory found (build or dist)${NC}"
+    echo -e "${YELLOW}💡 Make sure the frontend build completed successfully${NC}"
+    cd ..
+    exit 1
+fi
+
+# Deploy to Netlify
+echo "Deploying to Netlify..."
+netlify deploy --prod --dir="$BUILD_DIR"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Netlify deployment failed${NC}"
+    echo -e "${YELLOW}💡 Make sure you have:${NC}"
+    echo "   - Netlify CLI installed and authenticated (netlify login)"
+    echo "   - A Netlify site configured"
+    echo "   - Proper build output in $BUILD_DIR directory"
+    cd ..
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Netlify deployment successful!${NC}"
+
+# Return to project root
+cd ..
+
 # Load deployment URLs from environment or use placeholders
 HEROKU_APP_URL="${HEROKU_APP_URL:-https://your-app-name.herokuapp.com}"
 NETLIFY_SITE_URL="${NETLIFY_SITE_URL:-https://your-site-name.netlify.app}"
 
 echo -e "${YELLOW}🔧 Next Steps:${NC}"
 echo "1. Verify your Heroku app is running: $HEROKU_APP_URL"
-echo "2. Check your Netlify site: $NETLIFY_SITE_URL"if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Netlify build failed${NC}"
-    exit 1
-fi
+echo "2. Check your Netlify site: $NETLIFY_SITE_URL"
 
 echo
 echo -e "${YELLOW}📊 Step 7: Database Status Check${NC}"

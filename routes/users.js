@@ -19,7 +19,7 @@ router.get('/teachers', async (req, res) => {
       role: 'teacher', 
       isActive: true 
     })
-    .select('firstName lastName email subjects')
+    .select('firstName lastName subjects')
     .sort({ firstName: 1 });
 
     res.json(teachers);
@@ -28,7 +28,6 @@ router.get('/teachers', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 // @route   GET /api/users
 // @desc    Get all users (admin only)
 // @access  Private (Admin)
@@ -399,10 +398,6 @@ router.put('/parents/children/:parentId', [
       .trim()
       .isLength({ min: 2, max: 50 })
       .withMessage('Child name must be between 2 and 50 characters'),
-    body('children.*.age')
-      .optional()
-      .isInt({ min: 3, max: 18 })
-      .withMessage('Child age must be between 3 and 18'),
     body('children.*.grade')
       .optional()
       .trim()

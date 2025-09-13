@@ -10,7 +10,9 @@ const {
   authenticateToken, 
   requireAdmin, 
   requireAdminOrTeacher,
-  requireAppointmentAccess 
+  requireAppointmentAccess,
+  requireTeacher,
+  requireParent
 } = require('../middleware/auth');
 
 const router = express.Router();
@@ -123,23 +125,20 @@ router.post('/', [
     session.startTransaction();
     
     try {
-   // Persist the new appointment within the transaction
-   await appointment.save({ session });
+      // Only save the appointment within the transaction
+      // Remove the schedule update as there's no schedule in this context
+      await appointment.save({ session });
 
-   // Update schedule booking count within the same transaction
-   availableSchedule.currentBookings += 1;
-   await availableSchedule.save({ session });
-
-   // Commit only if both operations succeed
-   await session.commitTransaction();
- } catch (error) {
-   // Roll back on any failure
-   await session.abortTransaction();
-   throw error;
- } finally {
-   // Clean up the session
-   session.endSession();
- }
+      // Commit only if both operations succeed
+      await session.commitTransaction();
+    } catch (error) {
+      // Roll back on any failure
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      // Clean up the session
+      session.endSession();
+    }
     // Populate student and teacher details
     await appointment.populate('student teacher');
 
@@ -243,7 +242,7 @@ router.put('/:id', [
   [
     body('status')
       .optional()
-      .isIn(['scheduled', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rescheduled'])
+      .isIn(['available', 'booked', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rescheduled'])
       .withMessage('Invalid status'),
     body('notes')
       .optional()
@@ -390,7 +389,7 @@ router.post('/:id/reschedule', [
       rescheduleReason: reason,
       rescheduleRequestedBy: req.user.role,
       rescheduleRequestedAt: new Date(),
-      status: 'scheduled'
+      status: 'booked'
     });
 
     await newAppointment.save();
@@ -555,7 +554,8 @@ router.post('/book-from-schedule', [
     }
 
     // Check if the student belongs to the parent
-    if (studentDoc.parent.toString() !== req.user._id.toString()) {
+    // Check if the student belongs to the parent
+    if (studentDoc.parent._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only book appointments for your own children' });
     }
 
@@ -626,16 +626,27 @@ router.post('/book-from-schedule', [
       duration,
       location: location || 'in-person',
       notes,
-      status: 'scheduled'
+      status: 'available'
     });
 
-    await appointment.save();
-
-    // Update schedule booking count
-    availableSchedule.currentBookings += 1;
-    await availableSchedule.save();
-
-    // Populate student and teacher details
+    // Use a transaction to ensure atomicity
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    try {
+      await appointment.save({ session });
+      
+      // Update schedule booking count
+      availableSchedule.currentBookings += 1;
+      await availableSchedule.save({ session });
+      
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
     await appointment.populate('student teacher');
 
     res.status(201).json({
@@ -682,6 +693,164 @@ router.get('/conflicts', [
   } catch (error) {
     logError('Check conflicts error', error, req);
     res.status(500).json(createSafeErrorResponse(error, 'Server error while checking conflicts'));
+  }
+});
+
+// @route   GET /api/appointments/teacher
+// @desc    Get teacher's assigned appointments (read-only)
+// @access  Private (Teacher only)
+router.get('/teacher', [
+  authenticateToken,
+  requireTeacher
+], async (req, res) => {
+  try {
+    const appointments = await Appointment.find({
+      teacher: req.user._id
+    })
+    .populate('student', 'firstName lastName')
+    .populate('bookedBy', 'firstName lastName email')
+    .sort({ scheduledDate: 1, startTime: 1 });
+
+    res.json({
+      success: true,
+      appointments
+    });
+  } catch (error) {
+    logError('Get teacher appointments error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while fetching appointments'));
+  }
+});
+
+// @route   GET /api/appointments/available
+// @desc    Get available appointments for booking (parents only)
+// @access  Private (Parent only)
+router.get('/available', [
+  authenticateToken,
+  requireParent
+], async (req, res) => {
+  try {
+    const appointments = await Appointment.find({
+      status: 'available'
+    })
+    .populate('teacher', 'firstName lastName subjects')
+    .sort({ scheduledDate: 1, startTime: 1 });
+
+    res.json({
+      success: true,
+      appointments
+    });
+  } catch (error) {
+    logError('Get available appointments error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while fetching available appointments'));
+  }
+});
+
+// @route   POST /api/appointments/book
+// @desc    Book an available appointment (parents only)
+// @access  Private (Parent only)
+router.post('/book', [
+  authenticateToken,
+  requireParent,
+  [
+    body('appointmentId')
+      .isMongoId()
+      .withMessage('Valid appointment ID is required'),
+    body('student')
+      .isMongoId()
+      .withMessage('Valid student ID is required'),
+    body('notes')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Notes cannot exceed 500 characters')
+  ]
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
+    }
+
+    const { appointmentId, student, notes } = req.body;
+
+    // Check if appointment exists and is available
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    if (appointment.status !== 'available') {
+      return res.status(400).json({ message: 'Appointment is not available for booking' });
+    }
+
+    // Check if student belongs to parent
+    const studentDoc = await Student.findById(student).populate('parent');
+    if (!studentDoc || !studentDoc.parent || studentDoc.parent._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You can only book appointments for your own children' });
+    }
+    appointment.status = 'booked';
+    appointment.bookedBy = req.user._id;
+    appointment.bookedAt = new Date();
+    appointment.student = student;
+    if (notes) {
+      appointment.notes = notes;
+    }
+
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: 'Appointment successfully booked',
+      appointment
+    });
+  } catch (error) {
+    logError('Book appointment error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while booking appointment'));
+  }
+});
+
+// @route   PUT /api/appointments/:id/status
+// @desc    Update appointment status (admin only)
+// @access  Private (Admin only)
+router.put('/:id/status', [
+  authenticateToken,
+  requireAdmin,
+  [
+    body('status')
+      .isIn(['available', 'booked', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rescheduled'])
+      .withMessage('Valid status is required')
+  ]
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
+    }
+
+    const { status } = req.body;
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    appointment.status = status;
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: 'Appointment status updated successfully',
+      appointment
+    });
+  } catch (error) {
+    logError('Update appointment status error', error, req);
+    res.status(500).json(createSafeErrorResponse(error, 'Server error while updating appointment status'));
   }
 });
 

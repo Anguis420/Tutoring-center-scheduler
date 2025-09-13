@@ -35,7 +35,7 @@ const Dashboard = () => {
     if (user?.role === 'parent') {
       fetchStudents();
     }
-  }, [user, selectedStudent]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, selectedStudent]);
 
   const fetchDashboardData = async () => {
     try {
@@ -130,6 +130,8 @@ const Dashboard = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
+      available: { class: 'status-available', text: 'Available' },
+      booked: { class: 'status-booked', text: 'Booked' },
       scheduled: { class: 'status-scheduled', text: 'Scheduled' },
       confirmed: { class: 'status-confirmed', text: 'Confirmed' },
       'in-progress': { class: 'status-in-progress', text: 'In Progress' },
@@ -138,7 +140,7 @@ const Dashboard = () => {
       rescheduled: { class: 'status-rescheduled', text: 'Rescheduled' },
     };
 
-    const config = statusConfig[status] || statusConfig.scheduled;
+    const config = statusConfig[status] || statusConfig.available;
     return <span className={config.class}>{config.text}</span>;
   };
 
@@ -528,4 +530,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

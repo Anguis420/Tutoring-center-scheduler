@@ -15,6 +15,7 @@ if (!MONGODB_URI) {
   console.error('Please set MONGODB_URI in your .env file or environment variables');
   process.exit(1);
 }
+
 // Demo data
 const demoUsers = [
   {
@@ -92,7 +93,6 @@ const demoStudents = [
     firstName: 'Emma',
     lastName: 'Smith',
     dateOfBirth: '2009-05-15',
-    age: 14,
     grade: '9th Grade',
     subjects: ['Mathematics', 'English'],
     notes: 'Emma is a bright student who excels in mathematics.',
@@ -113,7 +113,6 @@ const demoStudents = [
     firstName: 'Lucas',
     lastName: 'Smith',
     dateOfBirth: '2011-08-22',
-    age: 12,
     grade: '7th Grade',
     subjects: ['Mathematics', 'Science'],
     notes: 'Lucas shows great interest in science experiments.',
@@ -134,7 +133,6 @@ const demoStudents = [
     firstName: 'Sophia',
     lastName: 'Wilson',
     dateOfBirth: '2007-03-10',
-    age: 16,
     grade: '11th Grade',
     subjects: ['Physics', 'Chemistry', 'Mathematics'],
     notes: 'Sophia is preparing for college applications.',
@@ -168,61 +166,56 @@ async function seedAtlasDatabase() {
     console.log('🧹 Clearing existing data...');
 
     // Add confirmation prompt for safety
-    const readline = require('readline');
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+    // Check for CI bypass or interactive environment
+    const seedConfirm = process.env.SEED_CONFIRM;
+    
+    if (seedConfirm) {
+      // CI bypass - check if confirmation is provided
+      if (seedConfirm.toLowerCase() === 'yes') {
+        console.log('✅ SEED_CONFIRM=yes detected, proceeding without prompt');
+      } else {
+        console.log('❌ SEED_CONFIRM is set but not "yes", operation cancelled');
+        process.exit(0);
+      }
+    } else {
+      // Interactive mode - check if we have a TTY
+      if (!process.stdin.isTTY) {
+        console.error('❌ Non-interactive environment detected. To run in CI or non-interactive mode, set SEED_CONFIRM=yes');
+        process.exit(1);
+      }
+      
+      // Use readline/promises for cleaner async/await
+      const { createInterface } = require('readline/promises');
+      
+      try {
+        const rl = createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
 
-    await new Promise((resolve) => {
-      rl.question('⚠️  This will delete ALL existing users and students. Continue? (yes/no): ', (answer) => {
+        const answer = await rl.question('⚠️  This will delete ALL existing users and students. Continue? (yes/no): ');
+        
         if (answer.toLowerCase() !== 'yes') {
           console.log('❌ Operation cancelled');
           rl.close();
           process.exit(0);
         }
+        
         rl.close();
-        resolve();
-      });
-    });
+      } catch (error) {
+        console.error('❌ Error with readline interface:', error.message);
+        throw error;
+      }
+    }
 
     await User.deleteMany({});
     await Student.deleteMany({});
     console.log('✅ Existing data cleared');
-    // Clear existing data
-    console.log('🧹 Clearing existing data...');
-    await User.deleteMany({});
-// Demo students data
-const demoStudents = [
-  {
-    firstName: 'Emma',
-    lastName: 'Smith',
-    parentEmail: 'parent@tutoring.com',
-    dateOfBirth: '2009-05-15',
-    // ... rest of student data
-  },
-  {
-    firstName: 'Lucas',
-    lastName: 'Smith',
-    parentEmail: 'parent@tutoring.com',
-    dateOfBirth: '2011-08-22',
-    // ... rest of student data
-  },
-  {
-    firstName: 'Sophia',
-    lastName: 'Wilson',
-    parentEmail: 'parent2@tutoring.com',
-    dateOfBirth: '2007-03-10',
-    // ... rest of student data
-  }
-];
 
-// Create students with parent references
-const studentsWithParents = demoStudents.map((student) => {
-  const parent = createdUsers.find(u => u.email === student.parentEmail);
-  const { parentEmail, ...studentData } = student;
-  return { ...studentData, parent: parent._id };
-});        const salt = await bcrypt.genSalt(12);
+    // Hash passwords for all users
+    const hashedUsers = await Promise.all(
+      demoUsers.map(async (user) => {
+        const salt = await bcrypt.genSalt(12);
         const hashedPassword = await bcrypt.hash(user.password, salt);
         return {
           ...user,

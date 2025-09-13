@@ -17,12 +17,6 @@ const studentSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Date of birth is required']
   },
-  age: {
-    type: Number,
-    min: 3,
-    max: 18,
-    required: [true, 'Age is required']
-  },
   grade: {
     type: String,
     trim: true,
@@ -101,7 +95,7 @@ studentSchema.virtual('currentAge').get(function() {
     }
     return age;
   }
-  return this.age;
+  return null;
 });
 
 // Method to get public profile

@@ -96,6 +96,7 @@ tutoring-center-scheduler/
 - Check `REACT_APP_API_URL` environment variable
 - Ensure backend is accessible from Netlify
 - Verify CORS settings on backend
+- Ensure `ALLOWED_ORIGINS` environment variable is set on backend with your Netlify domain
 
 ## 📚 Additional Resources
 

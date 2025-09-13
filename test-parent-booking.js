@@ -80,13 +80,18 @@ async function testParentBooking() {
     
     const bookingResponse = await api.post('/appointments/book-from-schedule', bookingData);
     console.log('Booking successful!');
-    console.log('Appointment ID:', bookingResponse.data.appointment._id);
-    
+    const appointmentId = bookingResponse.data?.appointment?._id;
+    if (!appointmentId) {
+      throw new Error('Invalid booking response: missing appointment ID');
+    }
+    console.log('Appointment ID:', appointmentId);    
     // Verify the schedule booking count was updated
     console.log('\n5. Verifying schedule was updated...');
     const updatedScheduleResponse = await api.get(`/schedules/${schedule._id}`);
-    const updatedSchedule = updatedScheduleResponse.data.schedule;
-    
+    const updatedSchedule = updatedScheduleResponse.data?.schedule;
+    if (!updatedSchedule) {
+      throw new Error('Invalid schedule response: missing schedule data');
+    }    
     console.log('Original bookings:', schedule.currentBookings);
     console.log('Updated bookings:', updatedSchedule.currentBookings);
     console.log('Max students:', updatedSchedule.maxStudents);

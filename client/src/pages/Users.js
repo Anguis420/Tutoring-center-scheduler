@@ -189,7 +189,7 @@ const Users = () => {
   };
 
   const addStudent = () => {
-    if (!newStudent.firstName || !newStudent.lastName || !newStudent.grade || !newStudent.age) {
+    if (!newStudent.firstName || !newStudent.lastName || !newStudent.grade) {
       toast.error('Please fill in all required student fields');
       return;
     }
@@ -229,7 +229,7 @@ const Users = () => {
   };
 
   const handleAddStudentToParent = async () => {
-    if (!newStudent.firstName || !newStudent.lastName || !newStudent.grade || !newStudent.age) {
+    if (!newStudent.firstName || !newStudent.lastName || !newStudent.grade) {
       toast.error('Please fill in all required student fields');
       return;
     }
@@ -742,8 +742,8 @@ const Users = () => {
                         </label>
                         <input
                           type="number"
-                          name="age"
-                          value={newStudent.age}
+                          name="currentAge"
+                          value={newStudent.currentAge}
                           onChange={handleStudentInputChange}
                           className="input w-full"
                           min="3"
@@ -841,7 +841,7 @@ const Users = () => {
                                 {student.firstName} {student.lastName}
                               </div>
                               <div className="text-sm text-gray-500">
-                                Grade {student.grade} • Age {student.age}
+                                Grade {student.grade} • Age {student.currentAge}
                                 {student.subjects.length > 0 && (
                                   <span className="ml-2">
                                     • Subjects: {student.subjects.join(', ')}
@@ -1200,8 +1200,8 @@ const Users = () => {
                       </label>
                       <input
                         type="number"
-                        name="age"
-                        value={newStudent.age}
+                        name="currentAge"
+                        value={newStudent.currentAge}
                         onChange={handleStudentInputChange}
                         className="input w-full"
                         min="3"

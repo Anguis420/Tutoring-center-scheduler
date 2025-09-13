@@ -49,17 +49,31 @@ const Appointments = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const params = {
-        page: currentPage,
-        limit: 10,
-        ...(searchTerm && { search: searchTerm }),
-        ...(statusFilter && { status: statusFilter }),
-        ...(dateFilter && { startDate: dateFilter })
-      };
-
-      const response = await api.get('/appointments', { params });
-      setAppointments(response.data.appointments);
-      setTotalPages(response.data.pagination.totalPages);
+      let response;
+      
+      if (user?.role === 'teacher') {
+        // Teachers can only view their assigned appointments
+        response = await api.get('/appointments/teacher');
+        setAppointments(response.data.appointments || []);
+        setTotalPages(1);
+      } else if (user?.role === 'parent') {
+        // Parents can only view available appointments for booking
+        response = await api.get('/appointments/available');
+        setAppointments(response.data.appointments || []);
+        setTotalPages(1);
+      } else if (user?.role === 'admin') {
+        // Admins can view all appointments with full management
+        const params = {
+          page: currentPage,
+          limit: 10,
+          ...(searchTerm && { search: searchTerm }),
+          ...(statusFilter && { status: statusFilter }),
+          ...(dateFilter && { startDate: dateFilter })
+        };
+        response = await api.get('/appointments', { params });
+        setAppointments(response.data.appointments);
+        setTotalPages(response.data.pagination.totalPages);
+      }
     } catch (error) {
       console.error('Error fetching appointments:', error);
       toast.error('Failed to fetch appointments');
@@ -147,6 +161,54 @@ const Appointments = () => {
     }
   };
 
+  const [bookingInProgress, setBookingInProgress] = useState(false);
+
+  const handleBookAppointment = async (appointmentId) => {
+    if (bookingInProgress) return;
+
+    if (!window.confirm('Are you sure you want to book this appointment?')) {
+      return;
+    }
+
+    try {
+      setBookingInProgress(true);
+      // For now, we'll use the first student of the parent
+      // In a real app, you'd have a student selection modal
+      const response = await api.get('/students');
+      const students = response.data.students;
+      
+      if (students.length === 0) {
+        toast.error('No students found. Please add a student first.');
+        return;
+      }
+
+      await api.post('/appointments/book', {
+        appointmentId: appointmentId,
+        student: students[0]._id,
+        notes: 'Booked by parent'
+      });
+      
+      toast.success('Appointment booked successfully!');
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error booking appointment:', error);
+      toast.error(error.response?.data?.message || 'Failed to book appointment');
+    } finally {
+      setBookingInProgress(false);
+    }
+  };
+
+  const handleUpdateStatus = async (appointmentId, newStatus) => {
+    try {
+      await api.put(`/appointments/${appointmentId}/status`, { status: newStatus });
+      toast.success(`Appointment status updated to ${newStatus}`);
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      toast.error(error.response?.data?.message || 'Failed to update appointment status');
+    }
+  };
+
   const handleInputChange = (e, formType) => {
     const { name, value } = e.target;
     if (formType === 'create') {
@@ -158,6 +220,8 @@ const Appointments = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
+      available: { class: 'status-available', text: 'Available' },
+      booked: { class: 'status-booked', text: 'Booked' },
       scheduled: { class: 'status-scheduled', text: 'Scheduled' },
       confirmed: { class: 'status-confirmed', text: 'Confirmed' },
       'in-progress': { class: 'status-in-progress', text: 'In Progress' },
@@ -166,7 +230,7 @@ const Appointments = () => {
       rescheduled: { class: 'status-rescheduled', text: 'Rescheduled' }
     };
 
-    const config = statusConfig[status] || statusConfig.scheduled;
+    const config = statusConfig[status] || statusConfig.available;
     return <span className={config.class}>{config.text}</span>;
   };
 
@@ -189,8 +253,16 @@ const Appointments = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-          <p className="text-gray-600">Manage tutoring sessions and schedules</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {user?.role === 'admin' && 'Appointments Management'}
+            {user?.role === 'teacher' && 'My Assigned Appointments'}
+            {user?.role === 'parent' && 'Available Appointments'}
+          </h1>
+          <p className="text-gray-600">
+            {user?.role === 'admin' && 'Manage tutoring sessions and schedules'}
+            {user?.role === 'teacher' && 'View your assigned tutoring sessions'}
+            {user?.role === 'parent' && 'Book available tutoring sessions for your children'}
+          </p>
         </div>
         {user?.role === 'admin' && (
           <button
@@ -226,12 +298,34 @@ const Appointments = () => {
               className="input"
             >
               <option value="">All Statuses</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="rescheduled">Rescheduled</option>
+              {user?.role === 'admin' && (
+                <>
+                  <option value="available">Available</option>
+                  <option value="booked">Booked</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="rescheduled">Rescheduled</option>
+                </>
+              )}
+              {user?.role === 'teacher' && (
+                <>
+                  <option value="booked">Booked</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </>
+              )}
+              {user?.role === 'parent' && (
+                <>
+                  <option value="available">Available</option>
+                  <option value="booked">Booked</option>
+                </>
+              )}
             </select>
 
             {/* Date Filter */}
@@ -281,6 +375,8 @@ const Appointments = () => {
                     <th className="table-header-cell">Subject</th>
                     {user?.role === 'admin' && <th className="table-header-cell">Student</th>}
                     {user?.role === 'admin' && <th className="table-header-cell">Teacher</th>}
+                    {user?.role === 'teacher' && <th className="table-header-cell">Student</th>}
+                    {user?.role === 'parent' && <th className="table-header-cell">Teacher</th>}
                     <th className="table-header-cell">Status</th>
                     <th className="table-header-cell">Actions</th>
                   </tr>
@@ -315,6 +411,20 @@ const Appointments = () => {
                           </span>
                         </td>
                       )}
+                      {user?.role === 'teacher' && (
+                        <td className="table-cell">
+                          <span className="text-sm text-gray-900">
+                            {appointment.student?.firstName} {appointment.student?.lastName}
+                          </span>
+                        </td>
+                      )}
+                      {user?.role === 'parent' && (
+                        <td className="table-cell">
+                          <span className="text-sm text-gray-900">
+                            {appointment.teacher?.firstName} {appointment.teacher?.lastName}
+                          </span>
+                        </td>
+                      )}
                       <td className="table-cell">
                         {getStatusBadge(appointment.status)}
                       </td>
@@ -327,6 +437,8 @@ const Appointments = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
+                          
+                          {/* Admin and Teacher actions */}
                           {canManageAppointment(appointment) && (
                             <>
                               <button
@@ -346,6 +458,24 @@ const Appointments = () => {
                                 </button>
                               )}
                             </>
+                          )}
+                          
+                          {/* Parent actions - booking only */}
+                          {user?.role === 'parent' && appointment.status === 'available' && (
+                            <button
+                              onClick={() => handleBookAppointment(appointment._id)}
+                              className="btn btn-sm btn-success"
+                              title="Book Appointment"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          )}
+                          
+                          {/* Teacher actions - view only (no management) */}
+                          {user?.role === 'teacher' && (
+                            <span className="text-sm text-gray-500">
+                              View Only
+                            </span>
                           )}
                         </div>
                       </td>
@@ -731,4 +861,4 @@ const Appointments = () => {
   );
 };
 
-export default Appointments; 
+export default Appointments;

@@ -18,9 +18,7 @@ self.addEventListener('install', event => {
 });
 
 // Fetch event
-self.addEventListener('fetch', event => {
-self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
+self.addEventListener('fetch', (event) => {  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
   // Handle navigations (SPA)

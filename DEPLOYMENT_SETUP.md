@@ -23,7 +23,9 @@ git remote add heroku https://git.heroku.com/your-app-name.git
 # Set environment variables in Heroku
 heroku config:set MONGODB_URI="your-mongodb-atlas-connection-string"
 heroku config:set JWT_SECRET="$(openssl rand -hex 32)"
+heroku config:set ALLOWED_ORIGINS="https://your-netlify-app.netlify.app,https://another-domain.com"
 # NODE_ENV is set by Heroku for Node.js apps; no need to set explicitly.
+
 ### 2. **Netlify Setup**
 1. Go to [Netlify](https://app.netlify.com)
 2. Click "New site from Git"
@@ -40,8 +42,9 @@ heroku config:set JWT_SECRET="$(openssl rand -hex 32)"
 3. Create a database user
 4. Configure Atlas IP Access List with only the IPs/CIDRs that need access (avoid 0.0.0.0/0).
 5. Get your connection string
-6. Update the connection string in your Heroku environment variables## 🚀 Using the Deployment Scripts
+6. Update the connection string in your Heroku environment variables
 
+## 🚀 Using the Deployment Scripts
 ### **Windows Users**
 ```bash
 # Run the comprehensive deployment script
@@ -72,7 +75,7 @@ If you prefer to deploy manually:
 ```bash
 git add .
 git commit -m "Your update message"
-### **Backend to Heroku**npm run build
+npm run build
 cd ..
 npm run netlify-build
 # Then push to your connected Git repository
@@ -81,7 +84,9 @@ git push origin main
 
 ### **Database Updates**
 - Use explicit, versioned migration scripts (e.g., migrate-mongo), and run them during deploy or via a one-off dyno.
-- Manage indexes with code or migrations; verify with Atlas.## 🐛 Troubleshooting
+- Manage indexes with code or migrations; verify with Atlas.
+
+## 🐛 Troubleshooting
 
 ### **Heroku Issues**
 ```bash
@@ -103,16 +108,20 @@ heroku restart
 ### **MongoDB Atlas Issues**
 - Verify connection string is correct
 - Check IP whitelist settings
-- Ensure database user has proper permissions
 
 ## 📊 Environment Variables Reference
 
 ### **Heroku (Backend)**
 ```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
-JWT_SECRET=your-super-secret-jwt-key
+
+## 📊 Environment Variables ReferenceALLOWED_ORIGINS=https://your-netlify-app.netlify.app,https://another-domain.com
 NODE_ENV=production  # optional; Heroku sets this for Node apps
-# Do NOT set PORT on Heroku; your app must listen on the port provided by $PORTREACT_APP_API_URL=https://your-heroku-app-name.herokuapp.com/api
+# Do NOT set PORT on Heroku; your app must listen on the port provided by $PORT
+```
+
+### **Netlify (Frontend)**
+```
+REACT_APP_API_URL=https://your-heroku-app-name.herokuapp.com/api
 NODE_ENV=production
 ```
 

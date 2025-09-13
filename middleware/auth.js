@@ -124,6 +124,10 @@ const requireScheduleAccess = () => {
       const Schedule = require('../models/Schedule');
       const schedule = await Schedule.findById(scheduleId);
 
+      if (!schedule) {
+        return res.status(404).json({ message: 'Schedule not found' });
+      }
+
       // Check if user is the teacher who owns this schedule
       if (req.user.role === 'teacher') {
         if (!schedule.teacher) {
@@ -134,8 +138,6 @@ const requireScheduleAccess = () => {
           return res.status(403).json({ message: 'Access denied. You can only manage your own schedules.' });
         }
       } else {
-        return res.status(403).json({ message: 'Access denied. Only teachers and admins can manage schedules.' });
-      }      } else {
         return res.status(403).json({ message: 'Access denied. Only teachers and admins can manage schedules.' });
       }
 

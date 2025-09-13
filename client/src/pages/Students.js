@@ -148,7 +148,7 @@ const Students = () => {
       firstName: student.firstName || '',
       lastName: student.lastName || '',
       dateOfBirth: student.dateOfBirth ? moment(student.dateOfBirth).format('YYYY-MM-DD') : '',
-      age: student.age || '',
+      currentAge: student.currentAge || '',
       grade: student.grade || '',
       subjects: student.subjects || [],
       notes: student.notes || '',
@@ -466,8 +466,8 @@ const Students = () => {
                   </label>
                   <input
                     type="number"
-                    name="age"
-                    value={createFormData.age}
+                    name="currentAge"
+                    value={createFormData.currentAge}
                     onChange={(e) => handleInputChange(e, 'create')}
                     className="input w-full"
                     min="3"
@@ -741,8 +741,8 @@ const Students = () => {
                   </label>
                   <input
                     type="number"
-                    name="age"
-                    value={editFormData.age}
+                    name="currentAge"
+                    value={editFormData.currentAge}
                     onChange={(e) => handleInputChange(e, 'edit')}
                     className="input w-full"
                     min="3"

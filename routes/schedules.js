@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Schedule = require('../models/Schedule');
 const User = require('../models/User');
+const Appointment = require('../models/Appointment');
 const { 
   authenticateToken, 
   requireAdmin, 
@@ -127,21 +128,16 @@ router.post('/', [
 
 // @route   GET /api/schedules/daily/:date
 // @desc    Get teacher's daily schedule with student appointments
+// @route   GET /api/schedules/daily/:date
+// @desc    Get teacher's daily schedule for a specific date
 // @access  Private (teacher only)
 router.get('/daily/:date', [
   authenticateToken,
   requireTeacher
 ], async (req, res) => {
   try {
-router.get('/schedules/:date', [/* …middleware… */], async (req, res) => {
     const { date } = req.params;
-    // Parse date in YYYY-MM-DD format to avoid timezone issues
-    const [year, month, day] = date.split('-').map(Number);
-    const scheduleDate = new Date(year, month - 1, day);
     
-    // Use UTC methods or a library like date-fns for consistent day calculation
-    const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayOfWeek = daysOfWeek[scheduleDate.getDay()];    
     // Validate date format (expecting YYYY-MM-DD)
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
@@ -153,12 +149,9 @@ router.get('/schedules/:date', [/* …middleware… */], async (req, res) => {
     if (isNaN(scheduleDate.getTime())) {
       return res.status(400).json({ message: 'Invalid date' });
     }
-    
     const dayOfWeek = scheduleDate
-      .toLocaleDateString('en-US', { weekday: 'long' })
+      .toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
       .toLowerCase();
-    // …rest of handler…    const scheduleDate = new Date(date);
-    const dayOfWeek = scheduleDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
     // Get teacher's schedules for this day
     const schedules = await Schedule.find({
@@ -173,9 +166,9 @@ router.get('/schedules/:date', [/* …middleware… */], async (req, res) => {
     const endOfDay = new Date(scheduleDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-const Schedule = require('../models/Schedule');
-const User     = require('../models/User');
-const Appointment = require('../models/Appointment');      teacher: req.user._id,
+    // Get appointments for this date
+    const appointments = await Appointment.find({
+      teacher: req.user._id,
       scheduledDate: {
         $gte: startOfDay,
         $lte: endOfDay
@@ -195,17 +188,16 @@ const Appointment = require('../models/Appointment');      teacher: req.user._id
       return {
         ...schedule.toObject(),
         students: scheduleAppointments.map(apt => ({
-          _id: apt.student._id,
-          firstName: apt.student.firstName,
-          lastName: apt.student.lastName,
-          fullName: apt.student.fullName,
-          grade: apt.student.grade,
+          _id: apt.student?._id,
+          firstName: apt.student?.firstName,
+          lastName: apt.student?.lastName,
+          fullName: apt.student?.fullName,
+          grade: apt.student?.grade,
           subject: apt.subject,
           appointmentId: apt._id,
           status: apt.status,
           notes: apt.notes
-        })),
-        totalBooked: scheduleAppointments.length,
+        })),        totalBooked: scheduleAppointments.length,
         availableSlots: schedule.maxStudents - scheduleAppointments.length
       };
     });

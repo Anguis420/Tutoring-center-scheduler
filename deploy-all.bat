@@ -57,9 +57,7 @@ cd ..
 echo.
 echo 🏗️ Step 3: Building Frontend
 echo ============================
-echo Building React application...
-echo Building React application...
-cd client
+echo Building React application...cd client
 call npm run build
 if %ERRORLEVEL% NEQ 0 (
     echo ❌ Frontend build failed
@@ -68,11 +66,12 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 cd ..
-echo ✅ Frontend build successful!if %ERRORLEVEL% NEQ 0 (
-    echo ❌ Frontend build failed
-    pause
-    exit /b 1
-)
+echo ✅ Frontend build successful!
+
+echo.
+echo 📝 Step 4: Committing Changes
+echo =============================
+REM Check if there are changes to commit
 REM Check if there are changes to commit
 git diff --cached --quiet
 if %ERRORLEVEL% EQU 0 (
@@ -83,16 +82,11 @@ if %ERRORLEVEL% EQU 0 (
     )
 )
 
-git add .
-git commit -m "!COMMIT_MSG!"
-if %ERRORLEVEL% NEQ 0 (
-    echo ❌ Git commit failed
-    pause
-    exit /b 1
-)
-echo ✅ Changes committed successfully!
-
-:DEPLOY_HEROKUif "!COMMIT_MSG!"=="" set COMMIT_MSG=Deploy updates to all services
+echo.
+echo 📝 Step 4: Committing Changes
+echo =============================
+set /p COMMIT_MSG="Enter commit message (or press Enter for default): "
+if "!COMMIT_MSG!"=="" set COMMIT_MSG=Deploy updates to all services
 
 git add .
 git commit -m "!COMMIT_MSG!"
@@ -102,6 +96,22 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 echo ✅ Changes committed successfully!
+if "!COMMIT_MSG!"=="" set COMMIT_MSG=Deploy updates to all services
+
+git add .
+git commit -m "!COMMIT_MSG!"
+if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Git commit failed
+    pause
+    exit /b 1
+)
+:DEPLOY_HEROKU
+echo.
+echo 📝 Step 4: Committing Changes
+echo =============================
+set /p COMMIT_MSG="Enter commit message (or press Enter for default): "
+if "!COMMIT_MSG!"=="" set COMMIT_MSG=Deploy updates to all services
+:DEPLOY_HEROKU
 
 echo.
 echo 🚀 Step 5: Deploying to Heroku
@@ -123,6 +133,21 @@ echo.
 echo 🌐 Step 6: Deploying to Netlify
 echo ===============================
 echo Deploying frontend to Netlify...
+
+REM Pre-check: Verify netlify-build script exists in package.json
+echo Checking for netlify-build script in package.json...
+findstr /C:"netlify-build" package.json >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Warning: netlify-build script not found in package.json
+    echo 💡 Please add the following script to your package.json:
+    echo    "netlify-build": "npm run install-client && npm run build:netlify"
+    echo.
+    echo Or check if the script name is different and update this script accordingly.
+    pause
+    exit /b 1
+)
+echo ✅ netlify-build script found in package.json
+
 call npm run netlify-build
 if %ERRORLEVEL% NEQ 0 (
     echo ❌ Netlify build failed
@@ -145,9 +170,22 @@ echo ✅ Backend deployed to Heroku
 echo ✅ Frontend deployed to Netlify  
 echo ✅ Database ready in MongoDB Atlas
 echo.
+REM Set URLs from environment variables with fallbacks
+if defined HEROKU_APP_URL (
+    set HEROKU_URL=%HEROKU_APP_URL%
+) else (
+    set HEROKU_URL=https://your-app-name.herokuapp.com
+)
+
+if defined NETLIFY_SITE_URL (
+    set NETLIFY_URL=%NETLIFY_SITE_URL%
+) else (
+    set NETLIFY_URL=https://your-site-name.netlify.app
+)
+
 echo 🔧 Next Steps:
-echo 1. Verify your Heroku app is running: https://your-app-name.herokuapp.com
-echo 2. Check your Netlify site: https://your-site-name.netlify.app
+echo 1. Verify your Heroku app is running: %HEROKU_URL%
+echo 2. Check your Netlify site: %NETLIFY_URL%
 echo 3. Test the full application flow
 echo 4. Monitor logs if needed:
 echo    - Heroku: heroku logs --tail

@@ -38,8 +38,19 @@ const appointmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['scheduled', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rescheduled'],
-    default: 'scheduled'
+    enum: ['available', 'booked', 'confirmed', 'in-progress', 'completed', 'cancelled', 'rescheduled'],
+    default: 'available'
+  },
+  // Who booked this appointment (for parent bookings)
+  bookedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false
+  },
+  // When it was booked
+  bookedAt: {
+    type: Date,
+    required: false
   },
   location: {
     type: String,
@@ -147,15 +158,98 @@ appointmentSchema.virtual('isToday').get(function() {
   return today.toDateString() === appointmentDate.toDateString();
 });
 
-// Pre-save middleware to calculate duration if not provided
+// Pre-save middleware to calculate duration and validate required fields
 appointmentSchema.pre('save', function(next) {
-  if (!this.duration && this.startTime && this.endTime) {
-    const start = this.startTime.split(':').map(Number);
-    const end = this.endTime.split(':').map(Number);
-    const startMinutes = start[0] * 60 + start[1];
-    const endMinutes = end[0] * 60 + end[1];
-    this.duration = endMinutes - startMinutes;
+  // If duration is not provided, calculate it from startTime and endTime
+  if (!this.duration) {
+    if (!this.startTime || !this.endTime) {
+      const error = new mongoose.Error.ValidationError();
+      error.addError('duration', new mongoose.Error.ValidatorError({
+        message: 'Duration is required and cannot be calculated without both startTime and endTime',
+        type: 'required',
+        path: 'duration',
+        value: this.duration
+      }));
+      return next(error);
+    }
+    
+    // Validate time format before calculation
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(this.startTime) || !timeRegex.test(this.endTime)) {
+      const error = new mongoose.Error.ValidationError();
+      error.addError('duration', new mongoose.Error.ValidatorError({
+        message: 'Duration cannot be calculated with invalid time format',
+        type: 'required',
+        path: 'duration',
+        value: this.duration
+      }));
+      return next(error);
+    }
+    
+    try {
+      const start = this.startTime.split(':').map(Number);
+      const end = this.endTime.split(':').map(Number);
+      const startMinutes = start[0] * 60 + start[1];
+      const endMinutes = end[0] * 60 + end[1];
+      
+      // Validate that end time is after start time
+      if (endMinutes <= startMinutes) {
+        const error = new mongoose.Error.ValidationError();
+        error.addError('duration', new mongoose.Error.ValidatorError({
+          message: 'End time must be after start time to calculate duration',
+          type: 'required',
+          path: 'duration',
+          value: this.duration
+        }));
+        return next(error);
+      }
+      
+      this.duration = endMinutes - startMinutes;
+    } catch (err) {
+      const error = new mongoose.Error.ValidationError();
+      error.addError('duration', new mongoose.Error.ValidatorError({
+        message: 'Duration cannot be calculated due to invalid time values',
+        type: 'required',
+        path: 'duration',
+        value: this.duration
+      }));
+      return next(error);
+    }
   }
+  next();
+});
+
+// Pre-init hook to stash the original document for comparison
+appointmentSchema.pre('init', function() {
+  this._original = this.toObject();
+});
+
+// Pre-save hook to enforce booking-field consistency
+appointmentSchema.pre('save', function(next) {
+  // Check if status is being modified or if it's already 'booked'
+  const isStatusModified = this.isModified('status');
+  const isCurrentlyBooked = this.status === 'booked';
+  const wasBooked = this.isModified('status') ? (this._original && this._original.status === 'booked') : false;
+  
+  // If status is 'booked' (either newly set or already set)
+  if (isCurrentlyBooked) {
+    // Require bookedBy when status is 'booked'
+    if (!this.bookedBy) {
+      return next(new Error('bookedBy is required when status is "booked"'));
+    }
+    
+    // Set bookedAt to current date if not present
+    if (!this.bookedAt) {
+      this.bookedAt = new Date();
+    }
+  }
+  // If status is not 'booked' (either changed away from 'booked' or was never 'booked')
+  else if (isStatusModified || wasBooked) {
+    // Clear booking fields when status is not 'booked'
+    this.bookedBy = undefined;
+    this.bookedAt = undefined;
+  }
+  
   next();
 });
 
@@ -214,5 +308,6 @@ appointmentSchema.statics.findConflicts = function(teacherId, date, startTime, e
   
   return this.find(query);
 };
+
 
 module.exports = mongoose.model('Appointment', appointmentSchema); 

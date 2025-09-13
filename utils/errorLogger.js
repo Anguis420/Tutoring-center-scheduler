@@ -12,6 +12,8 @@ function sanitizeRequestBody(body) {
 
   const sensitiveFields = [
     'password', 'passwd', 'pwd', 'secret', 'token', 'key', 'auth',
+    'apiKey', 'api_key', 'apiSecret', 'api_secret', 'accessToken', 'access_token',
+    'refreshToken', 'refresh_token', 'bearer', 'authorization',
     'ssn', 'socialSecurityNumber', 'social_security',
     'creditCard', 'credit_card', 'cardNumber', 'card_number',
     'cvv', 'cvc', 'expiry', 'expiration',
@@ -22,7 +24,6 @@ function sanitizeRequestBody(body) {
     'firstName', 'first_name', 'lastName', 'last_name',
     'dateOfBirth', 'date_of_birth', 'dob'
   ];
-
   const sanitized = {};
   
   for (const [key, value] of Object.entries(body)) {
@@ -40,12 +41,19 @@ function sanitizeRequestBody(body) {
       } else {
         sanitized[key] = '[REDACTED]';
       }
+    } else if (Array.isArray(value)) {
+      // Recursively sanitize arrays
+      sanitized[key] = value.map(item => 
+        typeof item === 'object' && item !== null ? sanitizeRequestBody(item) : item
+      );
+    } else if (typeof value === 'object' && value !== null) {
+      // Recursively sanitize nested objects
+      sanitized[key] = sanitizeRequestBody(value);
     } else {
       // Keep non-sensitive fields as-is
       sanitized[key] = value;
     }
-  }
-  
+  }  
   return sanitized;
 }
 
@@ -114,14 +122,8 @@ function logError(context, error, req) {
   console.error('Error details:', safeDetails);
 }
 
-/**
- * Creates a safe error response for the client
- * @param {Error} error - The error object
- * @param {string} defaultMessage - Default error message
- * @returns {Object} - Safe error response
- */
 function createSafeErrorResponse(error, defaultMessage = 'Internal server error') {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' && process.env.EXPOSE_STACK_TRACES !== 'false') {
     return {
       message: error.message,
       stack: error.stack

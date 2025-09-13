@@ -12,7 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import moment from 'moment';
+import moment from 'moment-timezone';
 
 const AvailableSchedules = () => {
   const { user } = useAuth();
@@ -91,97 +91,68 @@ const AvailableSchedules = () => {
     fetchStudents();
     fetchTeachers();
   }, [fetchSchedules, fetchStudents, fetchTeachers]);
-  const fetchTeachers = async () => {
-    try {
-      const response = await api.get('/users/teachers');
-      setTeachers(response.data);
-    } catch (error) {
-      console.error('Error fetching teachers:', error);
-    }
-  };
 
   const generateAvailableDates = (schedule) => {
     const dates = [];
     // Consider using moment-timezone or ensuring consistent timezone handling
     // const timezone = 'America/New_York'; // or get from user preferences
-    const today = moment();
-    const endDate = moment().add(4, 'weeks'); // Show next 4 weeks
+    // Use timezone-aware moment operations
+    const timezone = schedule.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+    const today = moment.tz(timezone);
+    const endDate = moment.tz(timezone).add(4, 'weeks'); // Show next 4 weeks
     
     let currentDate = today.clone();
     
     while (currentDate.isBefore(endDate)) {
-      if (currentDate.format('dddd').toLowerCase() === schedule.dayOfWeek) {
-        dates.push({
+      // Compare weekday in the same timezone as the schedule
+      if (currentDate.format('dddd').toLowerCase() === schedule.dayOfWeek) {        dates.push({
           date: currentDate.format('YYYY-MM-DD'),
           display: currentDate.format('MMM Do, YYYY'),
           dayName: currentDate.format('dddd')
-        });
-      }
+        });      }
       currentDate.add(1, 'day');
     }
     
     return dates;
-  };  const handleBookAppointment = (schedule) => {
-// inside your component, e.g. after other useState declarations
-const [bookingLoading, setBookingLoading] = useState(false);
+  };
 
-const handleBookingSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!bookingFormData.student || !bookingFormData.scheduledDate) {
-    toast.error('Please select a student and date');
-    return;
-  }
+  const [bookingLoading, setBookingLoading] = useState(false);
 
-  // Prevent duplicate submissions
-  if (bookingLoading) return;
+  const handleBookAppointment = (schedule) => {
+    setSelectedSchedule(schedule);
+    setBookingFormData({
+      student: '',
+      subject: schedule.subjects?.[0] || '',
+      scheduledDate: '',
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      notes: ''
+    });
+    setAvailableDates(generateAvailableDates(schedule));
+    setShowBookingModal(true);
+  };
 
-  try {
-    setBookingLoading(true);
-    const appointmentData = {
-      student: bookingFormData.student,
-      teacher: selectedSchedule.teacher._id,
-      subject: bookingFormData.subject,
-      scheduledDate: bookingFormData.scheduledDate,
-      startTime: bookingFormData.startTime,
-      endTime: bookingFormData.endTime,
-      notes: bookingFormData.notes,
-      location: 'in-person'
-    };
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!bookingFormData.student || !bookingFormData.scheduledDate) {
+      toast.error('Please select a student and date');
+      return;
+    }
 
-    await api.post('/appointments/book-from-schedule', appointmentData);
-    toast.success('Appointment booked successfully!');
-    setShowBookingModal(false);
-    setSelectedSchedule(null);
-    fetchSchedules(); // Refresh schedules to update availability
-  } catch (error) {
-    console.error('Error booking appointment:', error);
-    toast.error(error.response?.data?.message || 'Failed to book appointment');
-  } finally {
-    setBookingLoading(false);
-  }
-};
+    // Prevent duplicate submissions
+    if (bookingLoading) return;
 
-// …
-
-// In the JSX:
-<button
-  onClick={handleBookingSubmit}
-  className="btn btn-primary"
-  disabled={bookingLoading}
->
-  {bookingLoading ? (
-    <>
-      <div className="loading-spinner h-4 w-4 mr-2" />
-      Booking...
-    </>
-  ) : (
-    <>
-      <CheckCircle className="h-4 w-4 mr-2" />
-      Book Appointment
-    </>
-  )}
-</button>        notes: bookingFormData.notes,
+    try {
+      setBookingLoading(true);
+      const appointmentData = {
+        student: bookingFormData.student,
+        teacher: selectedSchedule.teacher._id,
+        subject: bookingFormData.subject,
+        scheduledDate: bookingFormData.scheduledDate,
+        startTime: bookingFormData.startTime,
+        endTime: bookingFormData.endTime,
+        notes: bookingFormData.notes,
         location: 'in-person'
       };
 
@@ -193,6 +164,8 @@ const handleBookingSubmit = async (e) => {
     } catch (error) {
       console.error('Error booking appointment:', error);
       toast.error(error.response?.data?.message || 'Failed to book appointment');
+    } finally {
+      setBookingLoading(false);
     }
   };
 
@@ -368,7 +341,9 @@ const handleBookingSubmit = async (e) => {
                             </span>
                           ))
                         : <span className="text-sm text-gray-500">No subjects specified</span>}
-                    </div>                  {getAvailabilityStatus(schedule)}
+                    </div>
+                  </div>
+                  {getAvailabilityStatus(schedule)}
                 </div>
 
                 <div className="space-y-3">
@@ -510,21 +485,16 @@ const handleBookingSubmit = async (e) => {
                     className="input w-full"
                     required
                   >
-<select
-  value={bookingFormData.subject}
-  onChange={(e) => setBookingFormData(prev => ({ ...prev, subject: e.target.value }))}
-  className="input w-full"
-  required
->
-  {!selectedSchedule.subjects?.length && (
-    <option value="">No subjects available</option>
-  )}
-  {selectedSchedule.subjects?.map(subject => (
-    <option key={subject} value={subject}>
-      {subject}
-    </option>
-  ))}
-</select>
+                    {!selectedSchedule.subjects?.length && (
+                      <option value="">No subjects available</option>
+                    )}
+                    {selectedSchedule.subjects?.map(subject => (
+                      <option key={subject} value={subject}>
+                        {subject}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Date *
@@ -593,9 +563,19 @@ const handleBookingSubmit = async (e) => {
               <button
                 onClick={handleBookingSubmit}
                 className="btn btn-primary"
+                disabled={bookingLoading}
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Book Appointment
+                {bookingLoading ? (
+                  <>
+                    <div className="loading-spinner h-4 w-4 mr-2" />
+                    Booking...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Book Appointment
+                  </>
+                )}
               </button>
             </div>
           </div>

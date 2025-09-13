@@ -237,8 +237,8 @@ const Profile = () => {
                         />
                         <input
                           type="number"
-                          value={child.age || ''}
-                          onChange={(e) => handleArrayInputChange('children', index, { ...child, age: e.target.value })}
+                          value={child.currentAge || ''}
+                          onChange={(e) => handleArrayInputChange('children', index, { ...child, currentAge: e.target.value })}
                           disabled={!isEditing}
                           placeholder="Age"
                           className="input w-20"

@@ -29,15 +29,30 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // CORS configuration
+const getAllowedOrigins = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Parse ALLOWED_ORIGINS environment variable
+    const allowedOrigins = process.env.ALLOWED_ORIGINS;
+    if (!allowedOrigins) {
+      console.warn('WARNING: ALLOWED_ORIGINS environment variable not set in production. CORS will be disabled.');
+      return [];
+    }
+    
+    // Split by comma, trim whitespace, and filter out empty strings
+    return allowedOrigins
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(origin => origin.length > 0);
+  } else {
+    // Development fallback
+    return ['http://localhost:3000'];
+  }
+};
+
+const allowedOrigins = getAllowedOrigins();
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        'https://friendly-moonbeam-85bd7c.netlify.app',
-        'https://classy-tiramify-5871d3.netlify.app',
-        'https://horologeist.netlify.app',
-        'https://horologiest.netlify.app'
-      ] 
-    : ['http://localhost:3000'],
+  origin: allowedOrigins.length > 0 ? allowedOrigins : false,
   credentials: true
 }));
 

@@ -25,6 +25,5 @@ echo 🔧 Before building on Netlify, set environment variable:
 echo - Key: REACT_APP_API_URL
 echo - Value: Your backend URL (e.g., https://api.example.com)
 echo   Note: CRA embeds REACT_APP_* at build time; changing it requires triggering a new deploy.
-echo.echo 📖 See deploy-to-netlify.md for detailed instructions
-echo.
+echo 📖 See deploy-to-netlify.md for detailed instructionsecho.
 pause
