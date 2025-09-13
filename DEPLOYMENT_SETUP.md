@@ -111,15 +111,7 @@ heroku restart
 
 ## 📊 Environment Variables Reference
 
-### **Heroku (Backend)**
-```
-
-## 📊 Environment Variables ReferenceALLOWED_ORIGINS=https://your-netlify-app.netlify.app,https://another-domain.com
-NODE_ENV=production  # optional; Heroku sets this for Node apps
-# Do NOT set PORT on Heroku; your app must listen on the port provided by $PORT
-```
-
-### **Netlify (Frontend)**
+### **Heroku (Backend)**### **Netlify (Frontend)**
 ```
 REACT_APP_API_URL=https://your-heroku-app-name.herokuapp.com/api
 NODE_ENV=production

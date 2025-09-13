@@ -184,14 +184,19 @@ const demoStudents = [
 async function seedDatabase() {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/tutoring-center-scheduler');
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/tutoring-center-scheduler';
+    await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
 
     // Clear existing data
+    const allowDestructive = process.env.ALLOW_DESTRUCTIVE_SEED === 'true';
+    const isLocal = /mongodb:\/\/(localhost|127\.0\.0\.1)/.test(mongoUri);
+    if (!allowDestructive && !isLocal) {
+      throw new Error('Refusing to delete collections on non-local DB without ALLOW_DESTRUCTIVE_SEED=true');
+    }
     await User.deleteMany({});
     await Student.deleteMany({});
     console.log('Cleared existing data');
-
     // Hash passwords and create users
     const hashedUsers = await Promise.all(
       demoUsers.map(async (user) => {
@@ -248,13 +253,12 @@ async function seedDatabase() {
 
   } catch (error) {
     console.error('Error seeding database:', error);
+    process.exitCode = 1;
   } finally {
     // Close connection
     await mongoose.connection.close();
     console.log('Database connection closed');
-    process.exit(0);
-  }
-}
+  }}
 
 // Run the seeding function
 seedDatabase(); 

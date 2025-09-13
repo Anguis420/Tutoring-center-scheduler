@@ -175,13 +175,15 @@ async function seedAtlasDatabase() {
         console.log('✅ SEED_CONFIRM=yes detected, proceeding without prompt');
       } else {
         console.log('❌ SEED_CONFIRM is set but not "yes", operation cancelled');
-        process.exit(0);
+        process.exitCode = 0;
+        return;
       }
     } else {
       // Interactive mode - check if we have a TTY
       if (!process.stdin.isTTY) {
         console.error('❌ Non-interactive environment detected. To run in CI or non-interactive mode, set SEED_CONFIRM=yes');
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       
       // Use readline/promises for cleaner async/await
@@ -198,7 +200,8 @@ async function seedAtlasDatabase() {
         if (answer.toLowerCase() !== 'yes') {
           console.log('❌ Operation cancelled');
           rl.close();
-          process.exit(0);
+          process.exitCode = 0;
+          return;
         }
         
         rl.close();
