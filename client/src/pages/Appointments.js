@@ -198,16 +198,6 @@ const Appointments = () => {
     }
   };
 
-  const handleUpdateStatus = async (appointmentId, newStatus) => {
-    try {
-      await api.put(`/appointments/${appointmentId}/status`, { status: newStatus });
-      toast.success(`Appointment status updated to ${newStatus}`);
-      fetchAppointments();
-    } catch (error) {
-      console.error('Error updating appointment status:', error);
-      toast.error(error.response?.data?.message || 'Failed to update appointment status');
-    }
-  };
 
   const handleInputChange = (e, formType) => {
     const { name, value } = e.target;

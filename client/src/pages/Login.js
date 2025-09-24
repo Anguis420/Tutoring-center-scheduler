@@ -24,9 +24,11 @@ const Login = () => {
   }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data) => {
+    console.log("onSubmit", data);
     setIsSubmitting(true);
     try {
       const result = await login(data.email, data.password);
+      console.log("is login successful", result);
       if (result.success) {
         navigate('/dashboard');
       } else {

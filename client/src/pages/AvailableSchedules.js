@@ -62,12 +62,6 @@ const AvailableSchedules = () => {
     }
   }, [currentPage, searchTerm, dayFilter, subjectFilter, teacherFilter]);
 
-  useEffect(() => {
-    fetchSchedules();
-    fetchStudents();
-    fetchTeachers();
-  }, [fetchSchedules]);
-
   const fetchStudents = useCallback(async () => {
     try {
       const response = await api.get('/students');
