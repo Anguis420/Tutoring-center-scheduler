@@ -32,7 +32,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   duration: {
     type: Number,
-    required: [true, 'Duration is required'],
+    required: false, // Will be calculated in pre-save hook
     min: [15, 'Duration must be at least 15 minutes'],
     max: [480, 'Duration cannot exceed 8 hours']
   },
@@ -160,18 +160,8 @@ appointmentSchema.virtual('isToday').get(function() {
 
 // Pre-save middleware to calculate duration and validate required fields
 appointmentSchema.pre('save', function(next) {
-  // If duration is not provided, calculate it from startTime and endTime
-  if (!this.duration) {
-    if (!this.startTime || !this.endTime) {
-      const error = new mongoose.Error.ValidationError();
-      error.addError('duration', new mongoose.Error.ValidatorError({
-        message: 'Duration is required and cannot be calculated without both startTime and endTime',
-        type: 'required',
-        path: 'duration',
-        value: this.duration
-      }));
-      return next(error);
-    }
+  // Always calculate duration from startTime and endTime if both are present
+  if (this.startTime && this.endTime) {
     
     // Validate time format before calculation
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -215,6 +205,16 @@ appointmentSchema.pre('save', function(next) {
       }));
       return next(error);
     }
+  } else {
+    // If startTime or endTime is missing, duration cannot be calculated
+    const error = new mongoose.Error.ValidationError();
+    error.addError('duration', new mongoose.Error.ValidatorError({
+      message: 'Duration cannot be calculated without both startTime and endTime',
+      type: 'required',
+      path: 'duration',
+      value: this.duration
+    }));
+    return next(error);
   }
   next();
 });

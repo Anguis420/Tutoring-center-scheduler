@@ -13,6 +13,7 @@
     "heroku-postbuild": "npm run install-client && npm run build",
     "netlify-build": "npm run install-client && npm run build:netlify",
     "seed": "node server/scripts/seed-demo-data.js",
+    "seed:atlas": "node server/seed-atlas.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },

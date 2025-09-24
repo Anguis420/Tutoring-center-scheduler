@@ -196,9 +196,9 @@ if exist "server\scripts\seed-demo-data.js" (
         echo [WARNING] Database seeding failed
     )
     cd ..
-) else if exist "seed-atlas.js" (
+) else if exist "server/seed-atlas.js" (
     set SEED_CONFIRM=yes
-    node seed-atlas.js
+    node server/seed-atlas.js
     if %errorlevel% equ 0 (
         echo [SUCCESS] Database seeded successfully
     ) else (

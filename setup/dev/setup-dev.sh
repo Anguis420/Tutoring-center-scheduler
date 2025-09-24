@@ -289,9 +289,9 @@ seed_database() {
         SEED_CONFIRM=yes node scripts/seed-demo-data.js
         cd ..
         print_success "Database seeded successfully"
-    elif [ -f "seed-atlas.js" ]; then
+    elif [ -f "server/seed-atlas.js" ]; then
         # Fallback to Atlas seed script if server script not found
-        SEED_CONFIRM=yes node seed-atlas.js
+        SEED_CONFIRM=yes node server/seed-atlas.js
         print_success "Database seeded successfully"
     else
         print_warning "Seed script not found. Skipping database seeding."

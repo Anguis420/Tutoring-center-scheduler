@@ -73,6 +73,42 @@ npm run server
 npm run client
 ```
 
+### 🔧 Port Management & Troubleshooting
+
+If you encounter port conflicts or processes that won't terminate:
+
+#### Quick Port Cleanup
+```bash
+# Kill processes on ports 3000 and 3001
+./quick-kill.sh
+
+# Kill specific ports
+./quick-kill.sh 3000 3001 8080
+
+# Comprehensive cleanup (handles all edge cases)
+./kill-processes.sh
+```
+
+#### Manual Commands
+```bash
+# Kill processes by port
+lsof -ti :3000 | xargs kill -9
+lsof -ti :3001 | xargs kill -9
+
+# Kill all Node.js processes
+pkill -f node
+pkill -f npm
+pkill -f nodemon
+```
+
+#### Common Issues & Solutions
+- **Port already in use**: Use `./quick-kill.sh` or `./kill-processes.sh`
+- **Processes won't terminate**: Try `pkill -9 -f node` (force kill)
+- **Zombie processes**: Run the comprehensive cleanup script
+- **TIME_WAIT connections**: Wait 2-4 minutes or restart terminal
+
+> 📖 **Detailed Guide**: See [PORT_CLEANUP_GUIDE.md](./PORT_CLEANUP_GUIDE.md) for comprehensive troubleshooting
+
 ### Production Mode
 
 ```bash
@@ -89,8 +125,8 @@ npm start
 
 ### Application URLs
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **Health Check**: http://localhost:5000/api/health
+- **Backend API**: http://localhost:3001
+- **Health Check**: http://localhost:3001/api/health
 
 ### Demo Accounts
 After running the setup script, you can use these pre-configured accounts:
@@ -157,7 +193,7 @@ cp setup/dev/.env.template .env
 # Edit with your configuration
 # MONGODB_URI=mongodb://localhost:27017/tutoring-center-scheduler
 # JWT_SECRET=your-secret-key
-# PORT=5000
+# PORT=3001
 ```
 
 ### Production Environment
@@ -215,7 +251,7 @@ tutoring-center-scheduler/
 │
 ├── 📄 package.json                # Root package configuration
 ├── 📄 README.md                   # This file
-├── 📄 seed-atlas.js               # Database seeding script (root level)
+├── 📄 server/seed-atlas.js        # Database seeding script for Atlas
 └── 📄 .env                        # Environment configuration (gitignored)
 ```
 

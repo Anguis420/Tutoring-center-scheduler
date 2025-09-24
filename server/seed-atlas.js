@@ -5,8 +5,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 // Import models
-const User = require('./server/models/User');
-const Student = require('./server/models/Student');
+const User = require('./models/User');
+const Student = require('./models/Student');
 
 // MongoDB Atlas connection string from environment variables
 const MONGODB_URI = process.env.MONGODB_URI;

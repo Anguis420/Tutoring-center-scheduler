@@ -120,25 +120,8 @@ router.post('/', [
       notes
     });
 
-    // Use a transaction to ensure atomicity
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    
-    try {
-      // Only save the appointment within the transaction
-      // Remove the schedule update as there's no schedule in this context
-      await appointment.save({ session });
-
-      // Commit only if both operations succeed
-      await session.commitTransaction();
-    } catch (error) {
-      // Roll back on any failure
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      // Clean up the session
-      session.endSession();
-    }
+    // Save the appointment (transactions not supported in local MongoDB)
+    await appointment.save();
     // Populate student and teacher details
     await appointment.populate('student teacher');
 
@@ -629,24 +612,12 @@ router.post('/book-from-schedule', [
       status: 'available'
     });
 
-    // Use a transaction to ensure atomicity
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // Save appointment and update schedule (transactions not supported in local MongoDB)
+    await appointment.save();
     
-    try {
-      await appointment.save({ session });
-      
-      // Update schedule booking count
-      availableSchedule.currentBookings += 1;
-      await availableSchedule.save({ session });
-      
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
+    // Update schedule booking count
+    availableSchedule.currentBookings += 1;
+    await availableSchedule.save();
     await appointment.populate('student teacher');
 
     res.status(201).json({
