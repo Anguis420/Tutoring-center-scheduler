@@ -1,9 +1,9 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const app = require('../server');
-const User = require('../models/User');
-const Student = require('../models/Student');
-const Appointment = require('../models/Appointment');
+const app = require('../../server');
+const User = require('../../models/User');
+const Student = require('../../models/Student');
+const Appointment = require('../../models/Appointment');
 const bcrypt = require('bcryptjs');
 
 describe('Appointment Role-Based Access Control', () => {

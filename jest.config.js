@@ -1,13 +1,16 @@
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.js'],
+  testMatch: [
+    '**/server/tests/**/*.test.js',
+    '**/tests/**/*.test.js'
+  ],
   collectCoverageFrom: [
-    '**/*.js',
+    'server/**/*.js',
+    '!server/tests/**',
     '!**/node_modules/**',
-    '!**/client/**',
-    '!**/tests/**',
     '!jest.config.js'
   ],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  testTimeout: 30000
+  setupFilesAfterEnv: ['<rootDir>/server/tests/setup.js'],
+  testTimeout: 30000,
+  roots: ['<rootDir>/server', '<rootDir>/tests']
 };

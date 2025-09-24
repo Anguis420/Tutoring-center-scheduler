@@ -4,8 +4,8 @@ const express = require('express');
 const cors = require('cors');
 
 // Import models and routes
-const User = require('../models/User');
-const authRoutes = require('../routes/auth');
+const User = require('../../models/User');
+const authRoutes = require('../../routes/auth');
 
 // Create a test app instance
 const createTestApp = () => {
