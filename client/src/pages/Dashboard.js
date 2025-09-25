@@ -50,9 +50,8 @@ const Dashboard = () => {
         setRecentAppointments(appointments.slice(0, 5));
       }
       
-      const appointments = recentAppointments;
-      
-      // Calculate statistics
+      // Calculate statistics using the fetched appointments
+      const appointments = appointmentsResponse.data.appointments || [];
       const now = new Date();
       const total = appointments.length;
       const upcoming = appointments.filter(apt => 
@@ -78,7 +77,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, selectedStudent, recentAppointments]);
+  }, [user, selectedStudent]);
 
   const fetchStudents = useCallback(async () => {
     try {
