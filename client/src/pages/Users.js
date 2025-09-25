@@ -39,6 +39,7 @@ const Users = () => {
   });
   const [createFormErrors, setCreateFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddStudentSection, setShowAddStudentSection] = useState(false);
   const [editFormData, setEditFormData] = useState({});
   const [students, setStudents] = useState([]);
   const [existingStudents, setExistingStudents] = useState([]);
@@ -194,6 +195,7 @@ const Users = () => {
     });
     setCreateFormErrors({});
     setIsSubmitting(false);
+    setShowAddStudentSection(false);
   };
 
   const handleCreateUser = async (e) => {
@@ -280,6 +282,10 @@ const Users = () => {
           [name]: ''
         }));
       }
+      // Reset add student section when role changes
+      if (name === 'role') {
+        setShowAddStudentSection(false);
+      }
     } else if (formType === 'edit') {
       setEditFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -307,6 +313,8 @@ const Users = () => {
       notes: ''
     });
     setNewSubject('');
+    setShowAddStudentSection(false);
+    toast.success('Student added successfully');
   };
 
   const removeStudent = (index) => {
@@ -842,9 +850,36 @@ const Users = () => {
                     You can add students now or add them later from the Students page.
                   </p>
                   
-                  {/* Add New Student Form */}
-                  <div className="border border-gray-200 rounded-lg p-4 mb-4">
-                    <h5 className="text-sm font-medium text-gray-700 mb-3">Add New Student</h5>
+                  {/* Show Add Student Button or Form */}
+                  {!showAddStudentSection ? (
+                    <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 mb-4">
+                          Would you like to add a student for this parent?
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddStudentSection(true)}
+                          className="btn btn-primary"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Student
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h5 className="text-sm font-medium text-gray-700">Add New Student</h5>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddStudentSection(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                          title="Close"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -972,6 +1007,7 @@ const Users = () => {
                       </button>
                     </div>
                   </div>
+                  )}
 
                   {/* List of Added Students */}
                   {students.length > 0 && (
