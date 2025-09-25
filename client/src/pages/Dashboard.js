@@ -92,14 +92,14 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching students:', error);
     }
-  }, [selectedStudent]);
+  }, []); // Remove selectedStudent dependency to avoid circular dependency
 
   useEffect(() => {
     fetchDashboardData();
     if (user?.role === 'parent') {
       fetchStudents();
     }
-  }, [user, selectedStudent, fetchDashboardData, fetchStudents]);
+  }, [user, selectedStudent]); // Remove function dependencies to avoid circular dependency
 
   // Quick Action Handlers
   const handleQuickAction = (action) => {
