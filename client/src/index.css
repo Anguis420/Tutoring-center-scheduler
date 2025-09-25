@@ -143,7 +143,7 @@
   }
   
   .modal-header {
-    @apply px-6 py-4 border-b border-gray-200;
+    @apply px-6 py-4 border-b border-gray-200 flex justify-between items-center;
   }
   
   .modal-body {
