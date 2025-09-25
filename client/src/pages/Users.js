@@ -37,6 +37,8 @@ const Users = () => {
     role: 'parent',
     password: ''
   });
+  const [createFormErrors, setCreateFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState({});
   const [students, setStudents] = useState([]);
   const [existingStudents, setExistingStudents] = useState([]);
@@ -119,8 +121,95 @@ const Users = () => {
     setShowEditModal(true);
   };
 
+  // Validation function
+  const validateCreateForm = () => {
+    const errors = {};
+    
+    // First Name validation
+    if (!createFormData.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    } else if (createFormData.firstName.trim().length < 2) {
+      errors.firstName = 'First name must be at least 2 characters';
+    } else if (createFormData.firstName.trim().length > 50) {
+      errors.firstName = 'First name cannot exceed 50 characters';
+    }
+    
+    // Last Name validation
+    if (!createFormData.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    } else if (createFormData.lastName.trim().length < 2) {
+      errors.lastName = 'Last name must be at least 2 characters';
+    } else if (createFormData.lastName.trim().length > 50) {
+      errors.lastName = 'Last name cannot exceed 50 characters';
+    }
+    
+    // Email validation
+    if (!createFormData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createFormData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    // Phone validation (optional but if provided, must be valid)
+    if (createFormData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(createFormData.phone.replace(/\s/g, ''))) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
+    // Role validation
+    if (!createFormData.role) {
+      errors.role = 'Role is required';
+    } else if (!['parent', 'teacher', 'admin'].includes(createFormData.role)) {
+      errors.role = 'Please select a valid role';
+    }
+    
+    // Password validation
+    if (!createFormData.password) {
+      errors.password = 'Password is required';
+    } else if (createFormData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    return errors;
+  };
+
+  // Helper function to reset create form
+  const resetCreateForm = () => {
+    setCreateFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: 'parent',
+      password: ''
+    });
+    setStudents([]);
+    setNewStudent({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: '',
+      age: '',
+      grade: '',
+      subjects: [],
+      notes: ''
+    });
+    setCreateFormErrors({});
+    setIsSubmitting(false);
+  };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
+    
+    // Validate form
+    const errors = validateCreateForm();
+    setCreateFormErrors(errors);
+    
+    // If there are validation errors, don't submit
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the validation errors before submitting');
+      return;
+    }
+    
+    setIsSubmitting(true);
     try {
       // First create the user
       const userResponse = await api.post('/users', createFormData);
@@ -146,28 +235,23 @@ const Users = () => {
       }
 
       setShowCreateModal(false);
-      setCreateFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        role: 'parent',
-        password: ''
-      });
-      setStudents([]);
-      setNewStudent({
-        firstName: '',
-        lastName: '',
-        dateOfBirth: '',
-        age: '',
-        grade: '',
-        subjects: [],
-        notes: ''
-      });
+      resetCreateForm();
       fetchUsers();
     } catch (error) {
       console.error('Error creating user:', error);
-      toast.error('Failed to create user');
+      if (error.response?.data?.errors) {
+        // Server-side validation errors
+        const serverErrors = {};
+        error.response.data.errors.forEach(err => {
+          serverErrors[err.path] = err.msg;
+        });
+        setCreateFormErrors(serverErrors);
+        toast.error('Please fix the validation errors');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to create user');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -189,6 +273,13 @@ const Users = () => {
     const { name, value } = e.target;
     if (formType === 'create') {
       setCreateFormData(prev => ({ ...prev, [name]: value }));
+      // Clear error for this field when user starts typing
+      if (createFormErrors[name]) {
+        setCreateFormErrors(prev => ({
+          ...prev,
+          [name]: ''
+        }));
+      }
     } else if (formType === 'edit') {
       setEditFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -604,18 +695,31 @@ const Users = () => {
 
       {/* Create User Modal */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+        <div className="modal-overlay" onClick={() => {
+          setShowCreateModal(false);
+          resetCreateForm();
+        }}>
           <div className="modal max-w-4xl" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="text-lg font-medium text-gray-900">Create New User</h3>
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  resetCreateForm();
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <form onSubmit={handleCreateUser} className="modal-body">
+              {/* Form Instructions */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">Required fields are marked with</span> <span className="text-red-500 font-bold">*</span>
+                </p>
+              </div>
+              
               {/* User Information */}
               <div className="mb-6">
                 <h4 className="text-md font-medium text-gray-900 mb-4 flex items-center">
@@ -625,83 +729,103 @@ const Users = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name
+                      First Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="firstName"
                       value={createFormData.firstName}
                       onChange={(e) => handleInputChange(e, 'create')}
-                      className="input w-full"
+                      className={`input w-full ${createFormErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                       required
                     />
+                    {createFormErrors.firstName && (
+                      <p className="mt-1 text-sm text-red-600">{createFormErrors.firstName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name
+                      Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="lastName"
                       value={createFormData.lastName}
                       onChange={(e) => handleInputChange(e, 'create')}
-                      className="input w-full"
+                      className={`input w-full ${createFormErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                       required
                     />
+                    {createFormErrors.lastName && (
+                      <p className="mt-1 text-sm text-red-600">{createFormErrors.lastName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
+                      Email <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       name="email"
                       value={createFormData.email}
                       onChange={(e) => handleInputChange(e, 'create')}
-                      className="input w-full"
+                      className={`input w-full ${createFormErrors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                       required
                     />
+                    {createFormErrors.email && (
+                      <p className="mt-1 text-sm text-red-600">{createFormErrors.email}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone
+                      Phone <span className="text-gray-400 text-xs">(optional)</span>
                     </label>
                     <input
                       type="tel"
                       name="phone"
                       value={createFormData.phone}
                       onChange={(e) => handleInputChange(e, 'create')}
-                      className="input w-full"
+                      className={`input w-full ${createFormErrors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="e.g., +1234567890"
                     />
+                    {createFormErrors.phone && (
+                      <p className="mt-1 text-sm text-red-600">{createFormErrors.phone}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role
+                      Role <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="role"
                       value={createFormData.role}
                       onChange={(e) => handleInputChange(e, 'create')}
-                      className="input w-full"
+                      className={`input w-full ${createFormErrors.role ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                       required
                     >
                       <option value="parent">Parent</option>
                       <option value="teacher">Teacher</option>
                       <option value="admin">Admin</option>
                     </select>
+                    {createFormErrors.role && (
+                      <p className="mt-1 text-sm text-red-600">{createFormErrors.role}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password
+                      Password <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
                       name="password"
                       value={createFormData.password}
                       onChange={(e) => handleInputChange(e, 'create')}
-                      className="input w-full"
+                      className={`input w-full ${createFormErrors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                       required
+                      placeholder="Minimum 6 characters"
                     />
+                    {createFormErrors.password && (
+                      <p className="mt-1 text-sm text-red-600">{createFormErrors.password}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -887,7 +1011,10 @@ const Users = () => {
             </form>
             <div className="modal-footer">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  resetCreateForm();
+                }}
                 className="btn btn-secondary"
               >
                 Cancel
@@ -895,8 +1022,18 @@ const Users = () => {
               <button
                 onClick={handleCreateUser}
                 className="btn btn-primary"
+                disabled={isSubmitting}
               >
-                Create User{students.length > 0 ? ` & ${students.length} Student(s)` : ''}
+                {isSubmitting ? (
+                  <>
+                    <div className="loading-spinner h-4 w-4 mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    Create User{students.length > 0 ? ` & ${students.length} Student(s)` : ''}
+                  </>
+                )}
               </button>
             </div>
           </div>
