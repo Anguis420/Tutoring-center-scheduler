@@ -664,6 +664,7 @@ const Schedules = () => {
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="text-gray-400 hover:text-gray-600"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -840,6 +841,7 @@ const Schedules = () => {
               <button
                 onClick={() => setShowViewModal(false)}
                 className="text-gray-400 hover:text-gray-600"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -905,6 +907,7 @@ const Schedules = () => {
               <button
                 onClick={() => setShowEditModal(false)}
                 className="text-gray-400 hover:text-gray-600"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>

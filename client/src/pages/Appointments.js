@@ -539,6 +539,7 @@ const Appointments = () => {
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="text-gray-400 hover:text-gray-600"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -676,6 +677,7 @@ const Appointments = () => {
               <button
                 onClick={() => setShowViewModal(false)}
                 className="text-gray-400 hover:text-gray-600"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -747,6 +749,7 @@ const Appointments = () => {
               <button
                 onClick={() => setShowEditModal(false)}
                 className="text-gray-400 hover:text-gray-600"
+                title="Close"
               >
                 <X className="h-5 w-5" />
               </button>
