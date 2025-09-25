@@ -179,7 +179,7 @@ router.get('/daily/:date', [
     .sort({ startTime: 1 });
 
     // Group appointments by schedule time slots
-    const scheduleWithStudents = schedules.map(schedule => {
+    const scheduleWithStudents = schedules.length === 0 ? [] : schedules.map(schedule => {
       const scheduleAppointments = appointments.filter(apt => 
         apt.startTime === schedule.startTime && 
         apt.endTime === schedule.endTime
@@ -257,8 +257,9 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const total = await Schedule.countDocuments(query);
 
+    // Return empty array if no schedules found
     res.json({
-      schedules,
+      schedules: schedules.length === 0 ? [] : schedules,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
@@ -474,7 +475,8 @@ router.get('/teacher/:teacherId', authenticateToken, async (req, res) => {
       .populate('teacher')
       .sort({ dayOfWeek: 1, startTime: 1 });
 
-    res.json({ schedules });
+    // Return empty array if no schedules found
+    res.json({ schedules: schedules.length === 0 ? [] : schedules });
 
   } catch (error) {
     console.error('Get teacher schedules error:', error);
@@ -497,8 +499,9 @@ router.get('/available', authenticateToken, async (req, res) => {
 
     const availableSchedules = await Schedule.findAvailable(dayOfWeek, startTime, endTime, subject);
 
+    // Return empty array if no schedules found
     res.json({ 
-      schedules: availableSchedules,
+      schedules: availableSchedules.length === 0 ? [] : availableSchedules,
       total: availableSchedules.length
     });
 
