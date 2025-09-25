@@ -153,6 +153,11 @@ router.get('/', authenticateToken, async (req, res) => {
     } = req.query;
 
     // Build query based on user role
+    console.log("inside get appointments");
+
+    console.log(req.user.role);
+
+
     let query = {};
 
     if (req.user.role === 'teacher') {
@@ -188,6 +193,19 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const total = await Appointment.countDocuments(query);
 
+    // Return empty response if no appointments found
+    if (appointments.length === 0) {
+      return res.json({
+        appointments: [],
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: 0,
+          totalAppointments: 0,
+          appointmentsPerPage: parseInt(limit)
+        }
+      });
+    }
+
     res.json({
       appointments,
       pagination: {
@@ -200,6 +218,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
   } catch (error) {
     logError('Get appointments error', error, req);
+    console.log(error);
     res.status(500).json(createSafeErrorResponse(error, 'Server error while fetching appointments'));
   }
 });

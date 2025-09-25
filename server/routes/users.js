@@ -22,7 +22,8 @@ router.get('/teachers', async (req, res) => {
     .select('firstName lastName subjects')
     .sort({ firstName: 1 });
 
-    res.json(teachers);
+    // Return empty array if no teachers found
+    res.json(teachers.length === 0 ? [] : teachers);
   } catch (error) {
     console.error('Get teachers error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -57,6 +58,19 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
       .limit(parseInt(limit));
 
     const total = await User.countDocuments(query);
+
+    // Return empty response if no users found
+    if (users.length === 0) {
+      return res.json({
+        users: [],
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: 0,
+          totalUsers: 0,
+          usersPerPage: parseInt(limit)
+        }
+      });
+    }
 
     res.json({
       users,
@@ -305,6 +319,19 @@ router.get('/role/:role', authenticateToken, requireAdmin, async (req, res) => {
 
     const total = await User.countDocuments({ role, isActive: true });
 
+    // Return empty response if no users found
+    if (users.length === 0) {
+      return res.json({
+        users: [],
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: 0,
+          totalUsers: 0,
+          usersPerPage: parseInt(limit)
+        }
+      });
+    }
+
     res.json({
       users,
       pagination: {
@@ -353,6 +380,14 @@ router.get('/teachers/available', authenticateToken, requireAdminOrTeacher, asyn
         slot.endTime >= endTime
       );
     });
+
+    // Return empty response if no available teachers found
+    if (availableTeachers.length === 0) {
+      return res.json({ 
+        teachers: [],
+        total: 0
+      });
+    }
 
     res.json({ 
       teachers: availableTeachers.map(teacher => teacher.getPublicProfile()),

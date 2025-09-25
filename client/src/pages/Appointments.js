@@ -71,12 +71,23 @@ const Appointments = () => {
           ...(dateFilter && { startDate: dateFilter })
         };
         response = await api.get('/appointments', { params });
-        setAppointments(response.data.appointments);
-        setTotalPages(response.data.pagination.totalPages);
+        setAppointments(response.data.appointments || []);
+        setTotalPages(response.data.pagination?.totalPages || 0);
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      toast.error('Failed to fetch appointments');
+      
+      // Only show error toast for actual errors, not empty responses
+      if (error.response?.status >= 400) {
+        toast.error('Failed to fetch appointments');
+      } else {
+        // For network errors or other issues, still show error but don't treat as critical
+        console.warn('Non-critical error fetching appointments:', error.message);
+      }
+      
+      // Ensure we have empty state on any error
+      setAppointments([]);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
@@ -353,8 +364,24 @@ const Appointments = () => {
               <Calendar className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No appointments found</h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchTerm || statusFilter || dateFilter ? 'Try adjusting your search criteria.' : 'Get started by creating a new appointment.'}
+                {searchTerm || statusFilter || dateFilter 
+                  ? 'Try adjusting your search criteria or filters.' 
+                  : user?.role === 'admin' 
+                    ? 'Get started by creating a new appointment.'
+                    : user?.role === 'teacher'
+                      ? 'You have no assigned appointments yet.'
+                      : 'No available appointments at the moment.'
+                }
               </p>
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="mt-4 btn btn-primary"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Appointment
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-hidden">
