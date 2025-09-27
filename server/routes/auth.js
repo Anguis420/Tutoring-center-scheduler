@@ -122,6 +122,7 @@ router.post('/login', [
   try {
     // Check for validation errors
     const errors = validationResult(req);
+    console.log(errors);
     if (!errors.isEmpty()) {
       return res.status(400).json({ 
         message: 'Validation failed',

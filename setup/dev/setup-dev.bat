@@ -165,7 +165,7 @@ if not exist ".env" (
         echo [INFO] Creating basic .env file...
         (
             echo # Development Environment Configuration
-            echo PORT=5000
+            echo PORT=3001
             echo NODE_ENV=development
             echo MONGODB_URI=mongodb://localhost:27017/tutoring-center-scheduler
             echo JWT_SECRET=your-super-secret-jwt-key-change-in-production
@@ -173,7 +173,7 @@ if not exist ".env" (
             echo BCRYPT_ROUNDS=12
             echo RATE_LIMIT_WINDOW_MS=900000
             echo RATE_LIMIT_MAX_REQUESTS=100
-            echo ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+            echo ALLOWED_ORIGINS=http://localhost:3000
             echo MONGODB_TEST_URI=mongodb://localhost:27017/tutoring_test
             echo TEST_PARENT_EMAIL=parent@tutoring.com
             echo TEST_PARENT_PASSWORD=parent123

@@ -259,7 +259,7 @@ setup_environment() {
             print_warning "Environment template not found. Creating basic .env file..."
             cat > .env << 'ENVEOF'
 # Development Environment Configuration
-PORT=5000
+PORT=3001
 NODE_ENV=development
 MONGODB_URI=mongodb://localhost:27017/tutoring-center-scheduler
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
@@ -267,7 +267,7 @@ JWT_EXPIRE=24h
 BCRYPT_ROUNDS=12
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+ALLOWED_ORIGINS=http://localhost:3000
 MONGODB_TEST_URI=mongodb://localhost:27017/tutoring_test
 TEST_PARENT_EMAIL=parent@tutoring.com
 TEST_PARENT_PASSWORD=parent123

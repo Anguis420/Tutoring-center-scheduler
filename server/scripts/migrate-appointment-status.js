@@ -7,7 +7,7 @@
 
 const mongoose = require('mongoose');
 const Appointment = require('../models/Appointment');
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/../../.env' });
 
 async function migrateAppointmentStatus() {
   try {
