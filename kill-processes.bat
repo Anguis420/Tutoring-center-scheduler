@@ -1,109 +1,89 @@
 @echo off
-REM Comprehensive process and port cleanup script for Windows
-REM This script handles all scenarios where ports don't get released
+REM Node.js Process Cleanup Script for Windows
+REM This script only kills Node.js related processes safely
 
-echo 🔍 Checking for running processes on ports 3000 and 3001...
+echo 🔍 Checking for Node.js processes...
 
-REM Function to kill processes by port
-:kill_by_port
-set port=%1
-echo 🔫 Killing processes on port %port%...
-
-REM Find processes using the port
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%port%"') do (
-    echo Found process %%a on port %port%
-    echo Attempting graceful termination...
-    taskkill /PID %%a /T 2>nul
-    timeout /t 2 /nobreak >nul
-    
-    REM Force kill if still running
-    taskkill /PID %%a /F /T 2>nul
-)
-
-REM Wait for cleanup
-timeout /t 1 /nobreak >nul
-
-REM Verify port is free
-netstat -ano | findstr ":%port%" >nul
-if %errorlevel% equ 0 (
-    echo ❌ Port %port% still in use
-) else (
-    echo ✅ Port %port% is now free
-)
-goto :eof
-
-REM Function to kill Node.js processes
+REM Function to kill Node.js processes by name
 :kill_node_processes
-echo 🔫 Killing all Node.js processes...
+echo 🔫 Killing Node.js processes...
 
-REM Kill by process name
+REM Kill Node.js processes
 taskkill /IM node.exe /F /T 2>nul
-taskkill /IM nodemon.exe /F /T 2>nul
-taskkill /IM npm.exe /F /T 2>nul
+if %errorlevel% equ 0 (
+    echo ✅ Killed node.exe processes
+) else (
+    echo ℹ️  No node.exe processes found
+)
 
-REM Kill by port
-call :kill_by_port 3000
-call :kill_by_port 3001
+REM Kill Nodemon processes
+taskkill /IM nodemon.exe /F /T 2>nul
+if %errorlevel% equ 0 (
+    echo ✅ Killed nodemon.exe processes
+) else (
+    echo ℹ️  No nodemon.exe processes found
+)
+
+REM Kill npm processes
+taskkill /IM npm.exe /F /T 2>nul
+if %errorlevel% equ 0 (
+    echo ✅ Killed npm.exe processes
+) else (
+    echo ℹ️  No npm.exe processes found
+)
 
 REM Wait for cleanup
 timeout /t 2 /nobreak >nul
 goto :eof
 
-REM Function to kill processes by pattern
-:kill_by_pattern
-set pattern=%1
-echo 🔫 Killing processes matching pattern: %pattern%
+REM Function to verify Node.js processes are killed
+:verify_node_processes
+echo ✅ Verifying Node.js processes are terminated...
 
-REM Find and kill processes
-for /f "tokens=2" %%a in ('tasklist /FI "IMAGENAME eq node.exe" /FO CSV ^| findstr /V "INFO"') do (
-    echo Found Node.js process %%a
-    taskkill /PID %%a /F /T 2>nul
-)
-goto :eof
-
-REM Function to verify ports are free
-:verify_ports
-echo ✅ Verifying ports are free...
-
-netstat -ano | findstr ":3000" >nul
+REM Check for remaining Node.js processes
+tasklist /FI "IMAGENAME eq node.exe" 2>nul | findstr "node.exe" >nul
 if %errorlevel% equ 0 (
-    echo ❌ Port 3000 still in use
-    netstat -ano | findstr ":3000"
-    goto :ports_not_free
+    echo ❌ Some node.exe processes still running
+    tasklist /FI "IMAGENAME eq node.exe"
+    goto :processes_still_running
 )
 
-netstat -ano | findstr ":3001" >nul
+tasklist /FI "IMAGENAME eq nodemon.exe" 2>nul | findstr "nodemon.exe" >nul
 if %errorlevel% equ 0 (
-    echo ❌ Port 3001 still in use
-    netstat -ano | findstr ":3001"
-    goto :ports_not_free
+    echo ❌ Some nodemon.exe processes still running
+    tasklist /FI "IMAGENAME eq nodemon.exe"
+    goto :processes_still_running
 )
 
-echo ✅ All ports are free!
-goto :ports_free
+tasklist /FI "IMAGENAME eq npm.exe" 2>nul | findstr "npm.exe" >nul
+if %errorlevel% equ 0 (
+    echo ❌ Some npm.exe processes still running
+    tasklist /FI "IMAGENAME eq npm.exe"
+    goto :processes_still_running
+)
 
-:ports_not_free
-echo ⚠️  WARNING: Some ports may still be in use.
-echo Try running this script again or restart your computer.
+echo ✅ All Node.js processes terminated successfully!
+goto :processes_killed
+
+:processes_still_running
+echo ⚠️  WARNING: Some Node.js processes may still be running.
+echo Try running this script again or manually kill them.
 goto :end
 
-:ports_free
-echo 🎉 SUCCESS: All processes killed and ports released!
-echo You can now start your server and client.
+:processes_killed
+echo 🎉 SUCCESS: All Node.js processes killed!
+echo You can now start your server and client safely.
 goto :end
 
 REM Main execution
-echo 🚀 Starting comprehensive process cleanup...
+echo 🚀 Starting Node.js process cleanup...
 echo ========================================
 
 REM Step 1: Kill Node.js processes
 call :kill_node_processes
 
-REM Step 2: Kill by specific patterns
-call :kill_by_pattern "tutoring-center-scheduler"
-
-REM Step 3: Verify
-call :verify_ports
+REM Step 2: Verify
+call :verify_node_processes
 
 :end
 echo ========================================
